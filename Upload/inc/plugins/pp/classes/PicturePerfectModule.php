@@ -1,0 +1,46 @@
+<?php
+/*
+ * Plugin Name: Picture Perfect for MyBB 1.8.x
+ * Copyright 2018 WildcardSearch
+ * http://www.rantcentralforums.com
+ *
+ * module wrapper
+ */
+
+class PicturePerfectModule extends ConfigurableModule010000
+{
+	/**
+	 * @var the path
+	 */
+	protected $path = PICTURE_PERFECT_MOD_URL;
+
+	/**
+	 * @var the function prefix
+	 */
+	protected $prefix = 'pp';
+
+	/**
+	 * @var
+	 */
+	protected $actionPhrase = 'Create Thumbnails';
+
+	/**
+	 * @var
+	 */
+	protected $pageAction = '';
+
+	/**
+	 * run the module parser routine
+	 *
+	 * @return string the return of the module routine
+	 */
+	public function processImages($images, $settings)
+	{
+		foreach (array('images', 'settings') as $key) {
+			$args[$key] = $$key;
+		}
+		return $this->run('process_images', $args);
+	}
+}
+
+?>
