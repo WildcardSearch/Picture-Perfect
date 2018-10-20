@@ -15,6 +15,7 @@ $l['pp_description'] = 'manage your forum\'s posted images';
 
 $l['pp_settingsgroup_description'] = 'placeholder';
 $l['pp_plugin_settings'] = 'Plugin Settings';
+$l['pp_manage_images'] = 'Manage Images';
 
 $l['pp_minify_js_title'] = 'Minify JavaScript?';
 $l['pp_minify_js_desc'] = 'YES (default) to serve client-side scripts minified to increase performance, NO to serve beautiful, commented code ;)';

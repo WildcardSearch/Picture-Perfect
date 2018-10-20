@@ -26,7 +26,7 @@ abstract class ConfigurableModule010000 extends ExternalModule010000 implements 
 	 */
 	static public function outputModuleSettings($module, $formContainer)
 	{
-		if (!$module->hasSettings) {
+		if ($module->hasSettings) {
 			return false;
 		}
 
