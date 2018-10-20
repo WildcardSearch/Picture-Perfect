@@ -329,10 +329,6 @@ function ppGetPostImages($message)
 
 		foreach ($matches as $match) {
 			$url = $match[$patternArray['key']];
-			if (strpos($url, '?') !== false) {
-				$urlArray = explode('?', $url);
-				$url = $urlArray[0];
-			}
 			$images[] = $url;
 		}
 	}
