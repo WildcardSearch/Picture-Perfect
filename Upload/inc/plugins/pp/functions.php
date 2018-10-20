@@ -136,10 +136,15 @@ function ppFetchRemoteFiles($files)
 	$threads = null;
 	foreach ($files as $id => $file) {
 		$h = $file['handle'] = curl_init($file['url']);
-		curl_setopt($h, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($h, CURLOPT_TIMEOUT, 1000);
 		curl_setopt($h, CURLOPT_USERAGENT, 'Picture Perfect');
+
+		curl_setopt($h, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($h, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($h, CURLOPT_SSL_VERIFYPEER, false);
+
+		curl_setopt($h, CURLOPT_CONNECTTIMEOUT, 10);
+		curl_setopt($h, CURLOPT_TIMEOUT, 20);
+
 		curl_multi_add_handle($multiHandle, $h);
 
 		$files[$id] = $file;
