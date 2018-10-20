@@ -8,6 +8,23 @@
  */
 
 $tables = array(
+	'pgsql' => array(
+		'pp_images' => array(
+			'id' => 'SERIAL',
+			'setid' => 'INT',
+			'pid' => 'INT NOT NULL',
+			'tid' => 'INT NOT NULL',
+			'url' => 'TEXT NOT NULL',
+			'caption' => 'TEXT',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
+		'pp_image_sets' => array(
+			'id' => 'SERIAL',
+			'title' => 'TEXT',
+			'description' => 'TEXT',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
+	),
 	'pp_images' => array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
 		'setid' => 'INT(10)',
