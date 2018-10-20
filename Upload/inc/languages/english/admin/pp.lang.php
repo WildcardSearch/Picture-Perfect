@@ -81,7 +81,12 @@ $l['pp_edit_set_submit'] = 'Update Image Set';
 $l['pp_edit_set_fail_message'] = 'The image set could not be updated.';
 $l['pp_edit_set_success_message'] = 'The image set was successfully updated.';
 
+// messages
+$l['pp_message_success'] = '{1} {2} successfully';
+$l['pp_message_fail'] = "{1} couldn't be {2} successfully";
+
 $l['pp_inline_selection_error'] = 'You did not select anything.';
+$l['pp_delete'] = 'Delete';
 $l['pp_deleted'] = 'deleted';
 $l['pp_inline_success'] = '{1} {2} successfully {3}';
 

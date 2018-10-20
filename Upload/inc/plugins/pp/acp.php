@@ -174,15 +174,15 @@ EOF;
 
 			$job_count = 0;
 			foreach ($mybb->input['pp_inline_ids'] as $id => $throw_away) {
-				$this_code = new PicturePerfectImageSet($id);
-				if (!$this_code->isValid()) {
+				$imageSet = new PicturePerfectImageSet($id);
+				if (!$imageSet->isValid()) {
 					continue;
 				}
 
 				switch ($mybb->input['inline_action']) {
 				case 'delete':
 					$action = $lang->pp_deleted;
-					if (!$this_code->remove()) {
+					if (!$imageSet->remove()) {
 						continue 2;
 					}
 					break;
@@ -192,6 +192,34 @@ EOF;
 			flash_message($lang->sprintf($lang->pp_inline_success, $job_count, $lang->pp_image_sets, $action), 'success');
 			admin_redirect($html->url(array('action' => 'sets')));
 		}
+	}
+
+	if ($mybb->input['mode'] == 'delete') {
+		// verify incoming POST request
+		if (!verify_post_check($mybb->input['my_post_key'])) {
+			flash_message($lang->invalid_post_verify_key2, 'error');
+			admin_redirect($html->url(array('action' => 'sets')));
+		}
+
+		// good info?
+		if (isset($mybb->input['id']) &&
+			(int) $mybb->input['id']) {
+			// then attempt deletion
+			$imageSet = new PicturePerfectImageSet($mybb->input['id']);
+			if ($imageSet->isValid()) {
+				$success = $imageSet->remove();
+			}
+		}
+
+		if ($success) {
+			// yay for us
+			flash_message($lang->sprintf($lang->pp_message_success, $lang->pp_image_sets, $lang->pp_deleted), 'success');
+			yourcode_build_cache();
+		} else {
+			// boo, we suck
+			flash_message($lang->sprintf($lang->pp_message_fail, $lang->pp_image_sets, $lang->pp_deleted), 'error');
+		}
+		admin_redirect($html->url(array('action' => 'sets')));
 	}
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_sets}");
@@ -219,9 +247,10 @@ EOF;
 EOF;
 
 	$table = new Table;
-	$table->construct_header($lang->pp_image_sets_title, array('width' => '40%'));
-	$table->construct_header($lang->pp_image_sets_description, array('width' => '40%'));
+	$table->construct_header($lang->pp_image_sets_title, array('width' => '35%'));
+	$table->construct_header($lang->pp_image_sets_description, array('width' => '35%'));
 	$table->construct_header($lang->pp_image_count, array('width' => '15%'));
+	$table->construct_header($lang->pp_delete, array('width' => '10%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
 
 	if (!empty($imageSets)) {
@@ -229,14 +258,18 @@ EOF;
 			$query = $db->simple_select('pp_images', 'COUNT(id) as image_count', "setid={$id}");
 			$imageCount = $db->fetch_field($query, 'image_count');
 
+			$deleteUrl = $html->url(array('action' => 'sets', 'mode' => 'delete', 'id' => $id, 'my_post_key' => $mybb->post_code));
+			$deleteLink = $html->link($deleteUrl, $lang->pp_delete);
+
 			$table->construct_cell($html->link($html->url(array('action' => 'view_set', 'id' => $id)), $imageSet['title']));
 			$table->construct_cell($imageSet['description']);
 			$table->construct_cell($imageCount);
+			$table->construct_cell($deleteLink);
 			$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('class' => 'pp_check')));
 			$table->construct_row();
 		}
 	} else {
-		$table->construct_cell($lang->pp_no_image_sets, array('colspan' => 4));
+		$table->construct_cell($lang->pp_no_image_sets, array('colspan' => 5));
 		$table->construct_row();
 	}
 
