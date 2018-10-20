@@ -796,7 +796,7 @@ function pp_admin_scan()
 	$start = (int) $mybb->input['start'];
 	$ppp = (int) $mybb->input['posts_per_page'];
 	if ($ppp == 0) {
-		$ppp = 100;
+		$ppp = 10000;
 	}
 	$totalCount = (int) $mybb->input['count'];
 
