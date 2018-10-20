@@ -81,6 +81,10 @@ $l['pp_edit_set_submit'] = 'Update Image Set';
 $l['pp_edit_set_fail_message'] = 'The image set could not be updated.';
 $l['pp_edit_set_success_message'] = 'The image set was successfully updated.';
 
+$l['pp_inline_selection_error'] = 'You did not select anything.';
+$l['pp_deleted'] = 'deleted';
+$l['pp_inline_success'] = '{1} {2} successfully {3}';
+
 // plugin requirements
 $l['pp_folders_requirement_warning'] = 'One or more folders are not writable. These folders need to be writable during installation and upgrades for themeable items to be upgraded on a per-theme basis.<br /><strong>Folder(s):</strong><br />';
 $l['pp_subfolders_unwritable'] = 'One or more subfolders in <span style="font-family: Courier New; font-weight: bolder; font-size: small; color: black;">{1}</span>';

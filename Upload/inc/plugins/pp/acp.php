@@ -158,6 +158,42 @@ function pp_admin_sets()
 
 EOF;
 
+	if ($mybb->request_method == 'post') {
+		if ($mybb->input['mode'] == 'inline') {
+			// verify incoming POST request
+			if (!verify_post_check($mybb->input['my_post_key'])) {
+				flash_message($lang->invalid_post_verify_key2, 'error');
+				admin_redirect($html->url(array('action' => 'sets')));
+			}
+
+			if (!is_array($mybb->input['pp_inline_ids']) ||
+				empty($mybb->input['pp_inline_ids'])) {
+				flash_message($lang->pp_inline_selection_error, 'error');
+				admin_redirect($html->url(array('action' => 'sets')));
+			}
+
+			$job_count = 0;
+			foreach ($mybb->input['pp_inline_ids'] as $id => $throw_away) {
+				$this_code = new PicturePerfectImageSet($id);
+				if (!$this_code->isValid()) {
+					continue;
+				}
+
+				switch ($mybb->input['inline_action']) {
+				case 'delete':
+					$action = $lang->pp_deleted;
+					if (!$this_code->remove()) {
+						continue 2;
+					}
+					break;
+				}
+				++$job_count;
+			}
+			flash_message($lang->sprintf($lang->pp_inline_success, $job_count, $lang->pp_image_sets, $action), 'success');
+			admin_redirect($html->url(array('action' => 'sets')));
+		}
+	}
+
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_sets}");
 	pp_output_tabs('pp_sets');
 
@@ -166,7 +202,7 @@ EOF;
 		$imageSets[$imageSet['id']] = $imageSet;
 	}
 
-	$form = new Form($html->url(), 'post');
+	$form = new Form($html->url(array('action' => 'sets', 'mode' => 'inline', 'inline_action' => 'delete')), 'post');
 
 	echo <<<EOF
 <div>
