@@ -15,6 +15,7 @@ $l['pp_description'] = 'manage your forum\'s posted images';
 
 $l['pp_settingsgroup_description'] = 'placeholder';
 $l['pp_plugin_settings'] = 'Plugin Settings';
+$l['pp_manage_images'] = 'Manage Images';
 
 $l['pp_minify_js_title'] = 'Minify JavaScript?';
 $l['pp_minify_js_desc'] = 'YES (default) to serve client-side scripts minified to increase performance, NO to serve beautiful, commented code ;)';
@@ -79,6 +80,15 @@ $l['pp_admin_edit_set_desc'] = 'edit this image set\'s details';
 $l['pp_edit_set_submit'] = 'Update Image Set';
 $l['pp_edit_set_fail_message'] = 'The image set could not be updated.';
 $l['pp_edit_set_success_message'] = 'The image set was successfully updated.';
+
+// messages
+$l['pp_message_success'] = '{1} {2} successfully';
+$l['pp_message_fail'] = "{1} couldn't be {2} successfully";
+
+$l['pp_inline_selection_error'] = 'You did not select anything.';
+$l['pp_delete'] = 'Delete';
+$l['pp_deleted'] = 'deleted';
+$l['pp_inline_success'] = '{1} {2} successfully {3}';
 
 // plugin requirements
 $l['pp_folders_requirement_warning'] = 'One or more folders are not writable. These folders need to be writable during installation and upgrades for themeable items to be upgraded on a per-theme basis.<br /><strong>Folder(s):</strong><br />';

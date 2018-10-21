@@ -7,7 +7,7 @@
  * wrapper to handle the plugin's installer
  */
 
-class PicturePerfectInstaller extends WildcardPluginInstaller010202
+class PicturePerfectInstaller extends WildcardPluginInstaller020000
 {
 	static public function getInstance()
 	{

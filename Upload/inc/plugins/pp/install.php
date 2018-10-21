@@ -20,7 +20,7 @@ if (!defined('IN_MYBB')) {
  */
 function pp_info()
 {
-	global $db, $lang, $mybb, $cp_style;
+	global $db, $lang, $mybb, $cache, $cp_style;
 
 	if (!$lang->pp) {
 		$lang->load('pp');
@@ -37,6 +37,21 @@ EOF;
 
 		$buttonPic = "styles/{$cp_style}/images/pp/donate.gif";
 		$borderPic = "styles/{$cp_style}/images/pp/pixel.gif";
+
+		// only show Manage Images link if active
+		$pluginList = $cache->read('plugins');
+		$manageLink = '';
+		if (!empty($pluginList['active']) &&
+			is_array($pluginList['active']) &&
+			in_array('pp', $pluginList['active'])) {
+			$url = PICTURE_PERFECT_URL;
+			$manageLink = <<<EOF
+	<li style="list-style-image: url(styles/{$cp_style}/images/pp/manage.png)">
+		<a href="{$url}" title="{$lang->pp_manage_images}">{$lang->pp_manage_images}</a>
+	</li>
+EOF;
+		}
+
 		$ppDescription = <<<EOF
 
 <table style="width: 100%;">
@@ -44,7 +59,8 @@ EOF;
 		<td style="width: 75%;">
 			{$lang->pp_description}
 			<ul id="mm_options">
-{$settingsLink}
+				{$settingsLink}
+				{$manageLink}
 			</ul>
 		</td>
 		<td style="text-align: center;">

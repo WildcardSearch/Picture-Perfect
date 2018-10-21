@@ -64,7 +64,7 @@ function pp_admin()
 function pp_admin_main()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
-	
+
 	$page->add_breadcrumb_item($lang->pp_admin_main);
 
 	// set up the page header
@@ -84,10 +84,11 @@ EOF;
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_main}");
 	pp_output_tabs('pp');
 
-	$query = $db->simple_select('pp_images');
-	while ($image = $db->fetch_array($query)) {
-		$images[$image['tid']][$image['pid']][] = $images['url'];
-	}
+	$query = $db->simple_select('pp_image_threads', 'COUNT(id) as resultCount');
+	$resultCount = $db->fetch_field($query, 'resultCount');
+
+	$perPage = 10;
+	$totalPages = ceil($resultCount / $perPage);
 
 	$form = new Form($html->url(), 'post');
 
@@ -100,6 +101,7 @@ EOF;
 		</select>
 		<input id="pp_inline_submit" type="submit" class="button" name="pp_inline_submit" value="{$lang->go} (0)"/>
 		<input id="pp_inline_clear" type="button" class="button" name="pp_inline_clear" value="{$lang->clear}"/>
+		<input type="hidden" name="page" value="{$mybb->input['page']}" />
 	</span>
 </div>
 <br />
@@ -110,17 +112,54 @@ EOF;
 	$table->construct_header($lang->pp_image_count, array('width' => '15%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
 
-	if (!empty($images)) {
-		$threadArray = array_keys($images);
-		$count = count($threadArray);
-		$threadList = implode(',', $threadArray);
-		$titleQuery = $db->simple_select('threads', 'subject, tid', "tid IN({$threadList})");
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	if (!isset($mybb->input['page']) ||
+		$mybb->input['page'] == '' ||
+		(int) $mybb->input['page'] < 1) {
+		// no page, page = 1
+		$mybb->input['page'] = 1;
+	} else if ($mybb->input['page'] > $totalPages) {
+		// past last page? page = last page
+		$mybb->input['page'] = $totalPages;
+	} else {
+		// in range? page = # in link
+		$mybb->input['page'] = (int) $mybb->input['page'];
+	}
 
-		while ($thread = $db->fetch_array($titleQuery)) {
+	// more than one page?
+	$start = ($mybb->input['page'] - 1) * $perPage;
+	if ($resultCount > $perPage) {
+		// save the pagination for below and show it here as well
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url());
+		echo($pagination . '<br />');
+	}
+
+	$limitSql = "LIMIT {$perPage}";
+	if ($start > 0) {
+		$limitSql = "LIMIT {$start}, {$perPage}";
+	}
+
+	$queryString = <<<EOF
+		SELECT i.id, i.tid, i.image_count, t.subject
+		FROM {$db->table_prefix}pp_image_threads i
+		LEFT JOIN {$db->table_prefix}threads t ON(t.tid=i.tid)
+		ORDER BY tid ASC
+		{$limitSql}
+EOF;
+
+	$query = $db->write_query($queryString);
+
+	if ($db->num_rows($query) > 0) {
+		while ($thread = $db->fetch_array($query)) {
 			$table->construct_cell($html->link($html->url(array('action' => 'view_thread', 'tid' => $thread['tid'])), $thread['subject']));
-			$table->construct_cell(count($images[$thread['tid']]));
+			$table->construct_cell($thread['image_count']);
 			$table->construct_cell($form->generate_check_box("pp_inline_ids[{$thread['tid']}]", '', '', array('class' => 'pp_check')));
 			$table->construct_row();
+
+			$done++;
+			if ($done >= $perPage) {
+				break;
+			}
 		}
 	} else {
 		$table->construct_cell($lang->pp_no_image_threads, array('colspan' => 3));
@@ -129,6 +168,13 @@ EOF;
 
 	$table->output($lang->pp_image_threads);
 	$form->end();
+	echo('<br />');
+
+	// more than one page?
+	if ($resultCount > $perPage) {
+		// if so show pagination on the right this time just to be weird
+		echo($pagination);
+	}
 
 	$page->output_footer();
 }
@@ -141,7 +187,7 @@ EOF;
 function pp_admin_sets()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
-	
+
 	$page->add_breadcrumb_item($lang->pp_admin_sets);
 
 	// set up the page header
@@ -158,15 +204,81 @@ function pp_admin_sets()
 
 EOF;
 
+	if ($mybb->request_method == 'post') {
+		if ($mybb->input['mode'] == 'inline') {
+			// verify incoming POST request
+			if (!verify_post_check($mybb->input['my_post_key'])) {
+				flash_message($lang->invalid_post_verify_key2, 'error');
+				admin_redirect($html->url(array('action' => 'sets', 'page' => $mybb->input['page'])));
+			}
+
+			if (!is_array($mybb->input['pp_inline_ids']) ||
+				empty($mybb->input['pp_inline_ids'])) {
+				flash_message($lang->pp_inline_selection_error, 'error');
+				admin_redirect($html->url(array('action' => 'sets', 'page' => $mybb->input['page'])));
+			}
+
+			$job_count = 0;
+			foreach ($mybb->input['pp_inline_ids'] as $id => $throw_away) {
+				$imageSet = new PicturePerfectImageSet($id);
+				if (!$imageSet->isValid()) {
+					continue;
+				}
+
+				switch ($mybb->input['inline_action']) {
+				case 'delete':
+					$action = $lang->pp_deleted;
+					if (!$imageSet->remove()) {
+						continue 2;
+					}
+					break;
+				}
+				++$job_count;
+			}
+			flash_message($lang->sprintf($lang->pp_inline_success, $job_count, $lang->pp_image_sets, $action), 'success');
+			admin_redirect($html->url(array('action' => 'sets', 'page' => $mybb->input['page'])));
+		}
+	}
+
+	if ($mybb->input['mode'] == 'delete') {
+		// verify incoming POST request
+		if (!verify_post_check($mybb->input['my_post_key'])) {
+			flash_message($lang->invalid_post_verify_key2, 'error');
+			admin_redirect($html->url(array('action' => 'sets')));
+		}
+
+		// good info?
+		if (isset($mybb->input['id']) &&
+			(int) $mybb->input['id']) {
+			// then attempt deletion
+			$imageSet = new PicturePerfectImageSet($mybb->input['id']);
+			if ($imageSet->isValid()) {
+				$success = $imageSet->remove();
+			}
+		}
+
+		if ($success) {
+			// yay for us
+			flash_message($lang->sprintf($lang->pp_message_success, $lang->pp_image_sets, $lang->pp_deleted), 'success');
+			yourcode_build_cache();
+		} else {
+			// boo, we suck
+			flash_message($lang->sprintf($lang->pp_message_fail, $lang->pp_image_sets, $lang->pp_deleted), 'error');
+		}
+		admin_redirect($html->url(array('action' => 'sets')));
+	}
+
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_sets}");
 	pp_output_tabs('pp_sets');
 
-	$query = $db->simple_select('pp_image_sets');
-	while ($imageSet = $db->fetch_array($query)) {
-		$imageSets[$imageSet['id']] = $imageSet;
-	}
+	// get a total count on the YourCodes
+	$query = $db->simple_select('pp_image_sets', 'COUNT(id) AS resultCount');
+	$resultCount = $db->fetch_field($query, 'resultCount');
 
-	$form = new Form($html->url(), 'post');
+	$perPage = 10;
+	$totalPages = ceil($resultCount / $perPage);
+
+	$form = new Form($html->url(array('action' => 'sets', 'mode' => 'inline', 'inline_action' => 'delete')), 'post');
 
 	echo <<<EOF
 <div>
@@ -183,29 +295,68 @@ EOF;
 EOF;
 
 	$table = new Table;
-	$table->construct_header($lang->pp_image_sets_title, array('width' => '40%'));
-	$table->construct_header($lang->pp_image_sets_description, array('width' => '40%'));
+	$table->construct_header($lang->pp_image_sets_title, array('width' => '35%'));
+	$table->construct_header($lang->pp_image_sets_description, array('width' => '35%'));
 	$table->construct_header($lang->pp_image_count, array('width' => '15%'));
+	$table->construct_header($lang->pp_delete, array('width' => '10%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
+
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	if (!isset($mybb->input['page']) ||
+		$mybb->input['page'] == '' ||
+		(int) $mybb->input['page'] < 1) {
+		// no page, page = 1
+		$mybb->input['page'] = 1;
+	} else if ($mybb->input['page'] > $totalPages) {
+		// past last page? page = last page
+		$mybb->input['page'] = $totalPages;
+	} else {
+		// in range? page = # in link
+		$mybb->input['page'] = (int) $mybb->input['page'];
+	}
+
+	// more than one page?
+	$start = ($mybb->input['page'] - 1) * $perPage;
+	if ($resultCount > $perPage) {
+		// save the pagination for below and show it here as well
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'sets')));
+		echo($pagination . '<br />');
+	}
+
+	$query = $db->simple_select('pp_image_sets', '*', '', array('order_by' => 'title ASC', 'limit_start' => $start, 'limit' => $perPage));
+	while ($imageSet = $db->fetch_array($query)) {
+		$imageSets[$imageSet['id']] = $imageSet;
+	}
 
 	if (!empty($imageSets)) {
 		foreach ($imageSets as $id => $imageSet) {
 			$query = $db->simple_select('pp_images', 'COUNT(id) as image_count', "setid={$id}");
 			$imageCount = $db->fetch_field($query, 'image_count');
 
+			$deleteUrl = $html->url(array('action' => 'sets', 'mode' => 'delete', 'id' => $id, 'my_post_key' => $mybb->post_code));
+			$deleteLink = $html->link($deleteUrl, $lang->pp_delete);
+
 			$table->construct_cell($html->link($html->url(array('action' => 'view_set', 'id' => $id)), $imageSet['title']));
 			$table->construct_cell($imageSet['description']);
 			$table->construct_cell($imageCount);
+			$table->construct_cell($deleteLink);
 			$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('class' => 'pp_check')));
 			$table->construct_row();
 		}
 	} else {
-		$table->construct_cell($lang->pp_no_image_sets, array('colspan' => 4));
+		$table->construct_cell($lang->pp_no_image_sets, array('colspan' => 5));
 		$table->construct_row();
 	}
 
 	$table->output($lang->pp_image_sets);
 	$form->end();
+	echo('<br />');
+
+	// more than one page?
+	if ($resultCount > $perPage) {
+		// if so show pagination on the right this time just to be weird
+		echo($pagination);
+	}
 
 	$page->output_footer();
 }
@@ -270,12 +421,12 @@ EOF;
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_thread}");
 	pp_output_tabs('pp_view_thread', $threadTitle, $tid);
 
-	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0");
-	$count = 0;
-	$images = array();
-	while ($image = $db->fetch_array($query)) {
-		$images[$image['id']] = $image;
-	}
+	// get a total count on the YourCodes
+	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "tid={$tid} AND setid=0");
+	$resultCount = $db->fetch_field($query, 'resultCount');
+
+	$perPage = 12;
+	$totalPages = ceil($resultCount / $perPage);
 
 	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'configure')), 'post');
 
@@ -304,6 +455,36 @@ EOF;
 	}
 
 	$table = new Table;
+
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	if (!isset($mybb->input['page']) ||
+		$mybb->input['page'] == '' ||
+		(int) $mybb->input['page'] < 1) {
+		// no page, page = 1
+		$mybb->input['page'] = 1;
+	} else if ($mybb->input['page'] > $totalPages) {
+		// past last page? page = last page
+		$mybb->input['page'] = $totalPages;
+	} else {
+		// in range? page = # in link
+		$mybb->input['page'] = (int) $mybb->input['page'];
+	}
+
+	// more than one page?
+	$start = ($mybb->input['page'] - 1) * $perPage;
+	if ($resultCount > $perPage) {
+		// save the pagination for below and show it here as well
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_thread', 'tid' => $tid)));
+		echo($pagination . '<br />');
+	}
+
+	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0", array('limit_start' => $start, 'limit' => $perPage));
+
+	$count = 0;
+	$images = array();
+	while ($image = $db->fetch_array($query)) {
+		$images[$image['id']] = $image;
+	}
 
 	foreach ($images as $id => $image) {
 		$imageClass = '';
@@ -339,8 +520,15 @@ EOF;
 		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
 	}
 	echo $form->generate_hidden_field('tid', $tid);
-	
+
 	$form->end();
+	echo('<br />');
+
+	// more than one page?
+	if ($resultCount > $perPage) {
+		// if so show pagination on the right this time just to be weird
+		echo($pagination);
+	}
 
 	$page->output_footer();
 }
@@ -353,7 +541,7 @@ EOF;
 function pp_admin_edit_set()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
-	
+
 	$page->add_breadcrumb_item($lang->pp_admin_edit_set);
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_edit_set}");
@@ -451,12 +639,13 @@ EOF;
 
 	$id = (int) $mybb->input['id'];
 	$imageSet = new PicturePerfectImageSet($id);
-	$query = $db->simple_select('pp_images', '*', "setid={$id}");
-	$count = 0;
-	$images = array();
-	while ($image = $db->fetch_array($query)) {
-		$images[$image['id']] = $image;
-	}
+
+	// get a total count on the YourCodes
+	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "setid={$id}");
+	$resultCount = $db->fetch_field($query, 'resultCount');
+
+	$perPage = 12;
+	$totalPages = ceil($resultCount / $perPage);
 
 	$form = new Form($html->url(array('action' => 'view_set', 'mode' => 'inline')), 'post');
 
@@ -475,6 +664,35 @@ EOF;
 EOF;
 
 	$table = new Table;
+
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	if (!isset($mybb->input['page']) ||
+		$mybb->input['page'] == '' ||
+		(int) $mybb->input['page'] < 1) {
+		// no page, page = 1
+		$mybb->input['page'] = 1;
+	} else if ($mybb->input['page'] > $totalPages) {
+		// past last page? page = last page
+		$mybb->input['page'] = $totalPages;
+	} else {
+		// in range? page = # in link
+		$mybb->input['page'] = (int) $mybb->input['page'];
+	}
+
+	// more than one page?
+	$start = ($mybb->input['page'] - 1) * $perPage;
+	if ($resultCount > $perPage) {
+		// save the pagination for below and show it here as well
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_set', 'id' => $id)));
+		echo($pagination . '<br />');
+	}
+
+	$query = $db->simple_select('pp_images', '*', "setid={$id}", array('limit_start' => $start, 'limit' => $perPage));
+	$count = 0;
+	$images = array();
+	while ($image = $db->fetch_array($query)) {
+		$images[$image['id']] = $image;
+	}
 
 	foreach ($images as $id => $image) {
 		$imageClass = '';
@@ -506,6 +724,14 @@ EOF;
 
 	$table->output($lang->pp_image_set . " &mdash; {$imageSet->get('title')}" . $checkbox);
 	$form->end();
+	echo('<br />');
+
+	// more than one page?
+	if ($resultCount > $perPage) {
+		// if so show pagination on the right this time just to be weird
+		echo($pagination);
+	}
+
 	$page->output_footer();
 }
 
@@ -714,7 +940,7 @@ function pp_admin_config_plugins_activate_commit() {
  */
 function pp_admin_scan()
 {
-	global $mybb, $page, $db, $lang, $min;
+	global $mybb, $page, $db, $lang, $cache, $min;
 	if ($page->active_action != 'pp') {
 		return false;
 	}
@@ -727,11 +953,18 @@ function pp_admin_scan()
 	$start = (int) $mybb->input['start'];
 	$ppp = (int) $mybb->input['posts_per_page'];
 	if ($ppp == 0) {
-		$ppp = 100;
+		$ppp = 10000;
 	}
 	$totalCount = (int) $mybb->input['count'];
 
 	if ($mybb->request_method == 'post') {
+		$threadCache = $cache->read('pp_thread_cache');
+
+		if (!is_array($threadCache) ||
+			empty($threadCache)) {
+			$threadCache = array();
+		}
+
 		$done = false;
 
 		$query = $db->simple_select('posts', 'pid, tid, message', '', array('limit' => $ppp, 'limit_start' => $start, 'order_by' => 'dateline', 'order_dir', 'ASC'));
@@ -745,6 +978,8 @@ function pp_admin_scan()
 		$insert_arrays = array();
 		while ($post = $db->fetch_array($query)) {
 			foreach ((array) ppGetPostImages($post['message']) as $source) {
+				$threadCache[$post['tid']]++;
+
 				$insert_arrays[] = array(
 					'setid' => 0,
 					'pid' => (int) $post['pid'],
@@ -760,10 +995,29 @@ function pp_admin_scan()
 		}
 
 		if ($done) {
+			$insert_arrays = array();
+
+			foreach ($threadCache as $tid => $count) {
+				$insert_arrays[] = array(
+					'tid' => (int) $tid,
+					'image_count' => (int) $count,
+					'dateline' => TIME_NOW,
+				);
+			}
+
+			if (!empty($insert_arrays)) {
+				$db->insert_query_multiple('pp_image_threads', $insert_arrays);
+			}
+
+			$cache->update('pp_thread_cache', null);
+
 			flash_message($lang->pp_installation_finished, 'success');
 			admin_redirect('index.php?module=config-plugins');
 		}
+
 		$start += $ppp;
+
+		$cache->update('pp_thread_cache', $threadCache);
 	}
 
 	$page->add_breadcrumb_item($lang->pp_installation);
@@ -785,7 +1039,7 @@ EOF;
 		$message = $lang->sprintf($lang->pp_installation_progress, $start, $totalCount);
 		$info = <<<EOF
 <div style="width: 100%; height: 40px; background: #f2f2f2; text-align: center; font-weight: bold;">
-	<span>{$message}</span>
+	<h1>{$message}</h1>
 <div>
 EOF;
 		echo($info);

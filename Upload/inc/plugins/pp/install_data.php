@@ -8,6 +8,35 @@
  */
 
 $tables = array(
+	'pgsql' => array(
+		'pp_image_threads' => array(
+			'id' => 'SERIAL',
+			'tid' => 'INT',
+			'image_count' => 'INT',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
+		'pp_images' => array(
+			'id' => 'SERIAL',
+			'setid' => 'INT',
+			'pid' => 'INT NOT NULL',
+			'tid' => 'INT NOT NULL',
+			'url' => 'TEXT NOT NULL',
+			'caption' => 'TEXT',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
+		'pp_image_sets' => array(
+			'id' => 'SERIAL',
+			'title' => 'TEXT',
+			'description' => 'TEXT',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
+	),
+	'pp_image_threads' => array(
+		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
+		'tid' => 'INT(10)',
+		'image_count' => 'INT(10)',
+		'dateline' => 'INT(10)',
+	),
 	'pp_images' => array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
 		'setid' => 'INT(10)',
@@ -63,6 +92,11 @@ EOF
 		'settings.gif' => array(
 			'image' => <<<EOF
 R0lGODlhEAAQAOMLAAAAAAMDAwYGBgoKCg0NDRoaGh0dHUlJSVhYWIeHh5aWlv///////////////////yH5BAEKAA8ALAAAAAAQABAAAARe8Mn5lKJ4nqRMOtmDPBvQAZ+IIQZgtoAxUodsEKcNSqXd2ahdwlWQWVgDV6JiaDYVi4VlSq1Gf87L0GVUsARK3tBm6LAAu4ktUC6yMueYgjubjHrzVJ2WKKdCFBYhEQA7
+EOF
+		),
+		'manage.png' => array(
+			'image' => <<<EOF
+iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAGFBMVEUAAAAlJSUmJiZERERGRkZNTU2Ojo7///9zy8a1AAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB+ECBRcENABjRZEAAABLSURBVAjXY2AAAbPycga2tLS0ADCjvLy8AA9DFMwoAGuEMFTLAxhYQQy38gSIMIhhbCyg4gJiAM0NS0sDMoCagQagMYBSaWAGWCMAcOcmgAP/MAEAAAAASUVORK5CYII=
 EOF
 		),
 	),
