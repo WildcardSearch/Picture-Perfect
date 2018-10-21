@@ -1,4 +1,4 @@
-## Picture Perfect 0.0.1 ALPHA
+## Picture Perfect 0.0.2 ALPHA
 for MyBB 1.8.x
 
 *make your MyBB forum images just right*
