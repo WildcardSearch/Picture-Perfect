@@ -9,6 +9,12 @@
 
 $tables = array(
 	'pgsql' => array(
+		'pp_image_threads' => array(
+			'id' => 'SERIAL',
+			'tid' => 'INT',
+			'image_count' => 'INT',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
 		'pp_images' => array(
 			'id' => 'SERIAL',
 			'setid' => 'INT',
@@ -24,6 +30,12 @@ $tables = array(
 			'description' => 'TEXT',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
+	),
+	'pp_image_threads' => array(
+		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
+		'tid' => 'INT(10)',
+		'image_count' => 'INT(10)',
+		'dateline' => 'INT(10)',
 	),
 	'pp_images' => array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',

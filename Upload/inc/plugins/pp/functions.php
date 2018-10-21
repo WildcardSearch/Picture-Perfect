@@ -281,6 +281,8 @@ function ppStorePostedImages($pid, $tid, $message)
 	if (!empty($insert_arrays)) {
 		$db->insert_query_multiple('pp_images', $insert_arrays);
 	}
+
+	return count($insert_arrays);
 }
 
 /**

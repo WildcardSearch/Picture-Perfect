@@ -64,7 +64,7 @@ function pp_admin()
 function pp_admin_main()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
-	
+
 	$page->add_breadcrumb_item($lang->pp_admin_main);
 
 	// set up the page header
@@ -84,13 +84,8 @@ EOF;
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_main}");
 	pp_output_tabs('pp');
 
-	$query = $db->simple_select('pp_images');
-	while ($image = $db->fetch_array($query)) {
-		$images[$image['tid']][$image['pid']][] = $images['url'];
-	}
-
-	// get a total count on the YourCodes
-	$resultCount = count($images);
+	$query = $db->simple_select('pp_image_threads', 'COUNT(id) as resultCount');
+	$resultCount = $db->fetch_field($query, 'resultCount');
 
 	$perPage = 10;
 	$totalPages = ceil($resultCount / $perPage);
@@ -139,28 +134,25 @@ EOF;
 		echo($pagination . '<br />');
 	}
 
+	$limitSql = "LIMIT {$perPage}";
 	if ($start > 0) {
-		$shifted = 0;
-		foreach ($images as $id => $info) {
-			if ($shifted >= $start) {
-				break;
-			}
-
-			unset($images[$id]);
-			$shifted++;
-		}
+		$limitSql = "LIMIT {$start}, {$perPage}";
 	}
 
-	if (!empty($images)) {
-		$done = 0;
-		$threadArray = array_keys($images);
-		$count = count($threadArray);
-		$threadList = implode(',', $threadArray);
-		$titleQuery = $db->simple_select('threads', 'subject, tid', "tid IN({$threadList})");
+	$queryString = <<<EOF
+		SELECT i.id, i.tid, i.image_count, t.subject
+		FROM {$db->table_prefix}pp_image_threads i
+		LEFT JOIN {$db->table_prefix}threads t ON(t.tid=i.tid)
+		ORDER BY tid ASC
+		{$limitSql}
+EOF;
 
-		while ($thread = $db->fetch_array($titleQuery)) {
+	$query = $db->write_query($queryString);
+
+	if ($db->num_rows($query) > 0) {
+		while ($thread = $db->fetch_array($query)) {
 			$table->construct_cell($html->link($html->url(array('action' => 'view_thread', 'tid' => $thread['tid'])), $thread['subject']));
-			$table->construct_cell(count($images[$thread['tid']]));
+			$table->construct_cell($thread['image_count']);
 			$table->construct_cell($form->generate_check_box("pp_inline_ids[{$thread['tid']}]", '', '', array('class' => 'pp_check')));
 			$table->construct_row();
 
@@ -195,7 +187,7 @@ EOF;
 function pp_admin_sets()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
-	
+
 	$page->add_breadcrumb_item($lang->pp_admin_sets);
 
 	// set up the page header
@@ -528,7 +520,7 @@ EOF;
 		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
 	}
 	echo $form->generate_hidden_field('tid', $tid);
-	
+
 	$form->end();
 	echo('<br />');
 
@@ -549,7 +541,7 @@ EOF;
 function pp_admin_edit_set()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
-	
+
 	$page->add_breadcrumb_item($lang->pp_admin_edit_set);
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_edit_set}");
@@ -948,7 +940,7 @@ function pp_admin_config_plugins_activate_commit() {
  */
 function pp_admin_scan()
 {
-	global $mybb, $page, $db, $lang, $min;
+	global $mybb, $page, $db, $lang, $cache, $min;
 	if ($page->active_action != 'pp') {
 		return false;
 	}
@@ -966,6 +958,13 @@ function pp_admin_scan()
 	$totalCount = (int) $mybb->input['count'];
 
 	if ($mybb->request_method == 'post') {
+		$threadCache = $cache->read('pp_thread_cache');
+
+		if (!is_array($threadCache) ||
+			empty($threadCache)) {
+			$threadCache = array();
+		}
+
 		$done = false;
 
 		$query = $db->simple_select('posts', 'pid, tid, message', '', array('limit' => $ppp, 'limit_start' => $start, 'order_by' => 'dateline', 'order_dir', 'ASC'));
@@ -979,6 +978,8 @@ function pp_admin_scan()
 		$insert_arrays = array();
 		while ($post = $db->fetch_array($query)) {
 			foreach ((array) ppGetPostImages($post['message']) as $source) {
+				$threadCache[$post['tid']]++;
+
 				$insert_arrays[] = array(
 					'setid' => 0,
 					'pid' => (int) $post['pid'],
@@ -994,10 +995,29 @@ function pp_admin_scan()
 		}
 
 		if ($done) {
+			$insert_arrays = array();
+
+			foreach ($threadCache as $tid => $count) {
+				$insert_arrays[] = array(
+					'tid' => (int) $tid,
+					'image_count' => (int) $count,
+					'dateline' => TIME_NOW,
+				);
+			}
+
+			if (!empty($insert_arrays)) {
+				$db->insert_query_multiple('pp_image_threads', $insert_arrays);
+			}
+
+			$cache->update('pp_thread_cache', null);
+
 			flash_message($lang->pp_installation_finished, 'success');
 			admin_redirect('index.php?module=config-plugins');
 		}
+
 		$start += $ppp;
+
+		$cache->update('pp_thread_cache', $threadCache);
 	}
 
 	$page->add_breadcrumb_item($lang->pp_installation);
@@ -1019,7 +1039,7 @@ EOF;
 		$message = $lang->sprintf($lang->pp_installation_progress, $start, $totalCount);
 		$info = <<<EOF
 <div style="width: 100%; height: 40px; background: #f2f2f2; text-align: center; font-weight: bold;">
-	<span>{$message}</span>
+	<h1>{$message}</h1>
 <div>
 EOF;
 		echo($info);
