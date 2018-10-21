@@ -43,10 +43,10 @@ function pp_thumbnails_info()
  * @param  array
  * @return void
  */
-function pp_thumbnails_process_images($args)
+function pp_thumbnails_process_images($images, $settings)
 {
 	global $html, $mybb;
-	extract($args);
+
 	$tid = $images[key($images)]['tid'];
 
 	$redirectAction = 'view_set';

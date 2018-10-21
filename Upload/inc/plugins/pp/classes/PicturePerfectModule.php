@@ -7,7 +7,7 @@
  * module wrapper
  */
 
-class PicturePerfectModule extends ConfigurableModule010000
+class PicturePerfectModule extends ConfigurableModule010010
 {
 	/**
 	 * @var the path
@@ -36,10 +36,7 @@ class PicturePerfectModule extends ConfigurableModule010000
 	 */
 	public function processImages($images, $settings)
 	{
-		foreach (array('images', 'settings') as $key) {
-			$args[$key] = $$key;
-		}
-		return $this->run('process_images', $args);
+		return $this->run('process_images', $images, $settings);
 	}
 }
 
