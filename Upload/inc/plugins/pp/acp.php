@@ -694,13 +694,14 @@ EOF;
 		$images[$image['id']] = $image;
 	}
 
+	$cacheBuster = '?dateline='.TIME_NOW;
 	foreach ($images as $id => $image) {
 		$imageClass = '';
 		if (strpos($image['url'], $mybb->settings['bburl']) !== false) {
 			$imageClass = ' localImage';
 		}
 
-		$imageElement = $html->img($image['url'], array('class' => "thumbnail{$imageClass}"));
+		$imageElement = $html->img($image['url'].$cacheBuster, array('class' => "thumbnail{$imageClass}"));
 
 		$table->construct_cell($form->generate_check_box("selected_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')), array('class' => 'ppImage'), array('class' => 'ppImage'));
 
