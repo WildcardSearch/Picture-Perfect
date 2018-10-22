@@ -30,6 +30,11 @@ class PicturePerfectModule extends ConfigurableModule010010
 	protected $pageAction = '';
 
 	/**
+	 * @var
+	 */
+	protected $imageLimit = 1;
+
+	/**
 	 * run the module parser routine
 	 *
 	 * @return string the return of the module routine

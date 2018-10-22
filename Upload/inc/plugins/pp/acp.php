@@ -762,6 +762,11 @@ function pp_admin_process_images()
 		admin_redirect($redirectUrl);
 	}
 
+	if ($selectedCount > $module->get('imageLimit')) {
+		flash_message($lang->sprintf($lang->pp_process_images_fail_exceed_module_limit, $module->get('imageLimit')), 'error');
+		admin_redirect($redirectUrl);
+	}
+
 	$page->add_breadcrumb_item($lang->pp_admin_process_images);
 
 	// set up the page header

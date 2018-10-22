@@ -19,6 +19,7 @@ function pp_thumbnails_info()
 		'description' => 'creates thumbnails from posted images',
 		'actionPhrase' => 'Create Thumbnails',
 		'pageAction' => 'view_thumbnails',
+		'imageLimit' => 12,
 		'version' => '1.0',
 		'settings' => array(
 			'max_width' => array(
