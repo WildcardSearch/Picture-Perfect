@@ -814,13 +814,10 @@ EOF;
 			}
 		}
 
-		$setArray = $module->processImages($images, $settings);
-		if (!$setArray['id']) {
-			flash_message($lang->pp_process_images_finalize_fail_could_not_create_set, 'error');
-		} else {
-			flash_message($lang->sprintf($lang->pp_process_images_finalize_success, $extra), 'success');
-		}
-		admin_redirect($html->url($setArray));
+		$info = $module->processImages($images, $settings);
+
+		flash_message($info['message'], $info['status']);
+		admin_redirect($html->url($info['redirect']));
 	}
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_process_images}");
@@ -840,14 +837,16 @@ EOF;
 	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'finalize')), 'post');
 	$formContainer = new FormContainer($module->get('title') . ' Settings');
 
-	$setArray = array('new' => 'new set');
+	if ($module->get('createsSet')) {
+		$setArray = array('new' => 'new set');
 
-	$query = $db->simple_select('pp_image_sets', 'id,title');
-	while ($set = $db->fetch_array($query)) {
-		$setArray[$set['id']] = $set['title'];
+		$query = $db->simple_select('pp_image_sets', 'id,title');
+		while ($set = $db->fetch_array($query)) {
+			$setArray[$set['id']] = $set['title'];
+		}
+
+		$formContainer->output_row($lang->pp_image_set, $lang->pp_image_set_desc, $form->generate_select_box('setid', $setArray, 'new', array('id' => 'setting_setid')), 'setid', array('id' => 'setting_setid'));
 	}
-
-	$formContainer->output_row($lang->pp_image_set, $lang->pp_image_set_desc, $form->generate_select_box('setid', $setArray, 'new', array('id' => 'setting_setid')), 'setid', array('id' => 'setting_setid'));
 
 	$module->outputSettings($formContainer);
 

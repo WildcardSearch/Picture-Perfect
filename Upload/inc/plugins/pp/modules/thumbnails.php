@@ -20,6 +20,7 @@ function pp_thumbnails_info()
 		'actionPhrase' => 'Create Thumbnails',
 		'pageAction' => 'view_thumbnails',
 		'imageLimit' => 12,
+		'createsSet' => true,
 		'version' => '1.0',
 		'settings' => array(
 			'max_width' => array(
@@ -46,7 +47,7 @@ function pp_thumbnails_info()
  */
 function pp_thumbnails_process_images($images, $settings)
 {
-	global $html, $mybb;
+	global $html, $mybb, $lang;
 
 	$tid = $images[key($images)]['tid'];
 
@@ -62,14 +63,14 @@ function pp_thumbnails_process_images($images, $settings)
 
 	$setId = $imageSet->get('id');
 
-	$returnArray = array(
+	$redirectInfo = array(
 		'action' => $redirectAction,
 		'mode' => $redirecMode,
 		'id' => $setId,
 	);
 
 	$basePath = "images/picture_perfect/thumbs/{$tid}-{$settings['max_width']}x{$settings['max_height']}";
-	$path = MYBB_ROOT . $basePath;
+	$path = MYBB_ROOT.$basePath;
 
 	if (!file_exists($path) &&
 		@!mkdir($path)) {
@@ -98,7 +99,14 @@ function pp_thumbnails_process_images($images, $settings)
 		$newImage->save();
 	}
 
-	return $returnArray;
+	$status = 'success';
+	$message = 'Thumbnail image(s) created successfully!';
+
+	return array(
+		'redirect' => $redirectInfo,
+		'status' => $status,
+		'message' => $message,
+	);
 }
 
 ?>

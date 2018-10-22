@@ -22,7 +22,7 @@ class PicturePerfectModule extends ConfigurableModule010010
 	/**
 	 * @var
 	 */
-	protected $actionPhrase = 'Create Thumbnails';
+	protected $actionPhrase = '';
 
 	/**
 	 * @var
@@ -33,6 +33,11 @@ class PicturePerfectModule extends ConfigurableModule010010
 	 * @var
 	 */
 	protected $imageLimit = 1;
+
+	/**
+	 * @var
+	 */
+	protected $createsSet = true;
 
 	/**
 	 * run the module parser routine
