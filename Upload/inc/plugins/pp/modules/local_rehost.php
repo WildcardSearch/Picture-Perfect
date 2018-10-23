@@ -72,7 +72,10 @@ function pp_local_rehost_process_images($images, $settings)
 		@!mkdir($path)) {
 		return array(
 			'redirect' => $redirectInfo,
-			'messages' => array('error' => 'Could not create installation folder(s)'),
+			'messages' => array(
+				'status' => 'error',
+				'message' => 'Could not create installation folder(s)',
+			)
 		);
 	}
 
@@ -101,7 +104,7 @@ function pp_local_rehost_process_images($images, $settings)
 		$image['image'] = @imagecreatefromstring($image['content']);
 
 		if (!$image['image'] ||
-			!is_resource($image['image']) {
+			!is_resource($image['image'])) {
 			$fail++;
 			continue;
 		}
@@ -145,11 +148,17 @@ function pp_local_rehost_process_images($images, $settings)
 	// build messages
 	$messages = array();
 	if ($success) {
-		$messages['success'] = $lang->sprintf('{1} image(s) locally rehosted successfully', $success);
+		$messages[] = array(
+			'status' => 'success',
+			'message' => $lang->sprintf('{1} image(s) locally rehosted successfully', $success),
+		);
 	}
 
 	if ($fail) {
-		$messages['error'] = $lang->sprintf('{1} image(s) could not be locally rehosted successfully', $fail);
+		$messages[] = array(
+			'status' => 'error',
+			'message' => $lang->sprintf('{1} image(s) could not be locally rehosted successfully', $fail)
+		);
 	}
 
 	return array(

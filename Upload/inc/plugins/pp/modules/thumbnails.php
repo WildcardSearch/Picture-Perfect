@@ -79,7 +79,10 @@ function pp_thumbnails_process_images($images, $settings)
 				'action' => 'view_thread',
 				'tid' => $tid,
 			),
-			'messages' => array('error' => 'Image folder could not be created.'),
+			'messages' => array(
+				'status' => 'error',
+				'message' => 'Image folder could not be created.',
+			),
 		);
 	}
 
@@ -111,16 +114,25 @@ function pp_thumbnails_process_images($images, $settings)
 
 	$messages = array();
 	if ($success) {
-		$messages['success'] = $lang->sprintf('{1} thumbnail image(s) created successfully', $success);
+		$messages[] = array(
+			'status' => 'success',
+			'message' => $lang->sprintf('{1} thumbnail image(s) created successfully', $success),
+		);
 	}
 
 	if ($fail) {
-		$messages['error'] = $lang->sprintf('{1} thumbnail image(s) could not be created successfully', $fail);
+		$messages[] = array(
+			'status' => 'error',
+			'message' => $lang->sprintf('{1} thumbnail image(s) could not be created successfully', $fail),
+		);
 	}
 
 	if (!$success &&
 		!$fail) {
-		$messages['error'] = 'No valid image found.';
+		$messages[] = array(
+			'status' => 'error',
+			'message' => 'No valid image found.',
+		);
 	}
 
 	return array(
