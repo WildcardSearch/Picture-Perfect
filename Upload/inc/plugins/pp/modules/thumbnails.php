@@ -52,11 +52,11 @@ function pp_thumbnails_process_images($images, $settings)
 	$tid = $images[key($images)]['tid'];
 
 	$redirectAction = 'view_set';
-	$redirecMode = '';
+	$redirectMode = '';
 	$imageSet = new PicturePerfectImageSet($mybb->input['setid']);
 	if (!$imageSet->isValid()) {
 		$redirectAction = 'edit_set';
-		$redirecMode = 'new_set';
+		$redirectMode = 'new_set';
 		$imageSet->set('title', 'New Image Set');
 		$imageSet->save();
 	}
@@ -65,7 +65,7 @@ function pp_thumbnails_process_images($images, $settings)
 
 	$redirectInfo = array(
 		'action' => $redirectAction,
-		'mode' => $redirecMode,
+		'mode' => $redirectMode,
 		'id' => $setId,
 	);
 
@@ -74,12 +74,19 @@ function pp_thumbnails_process_images($images, $settings)
 
 	if (!file_exists($path) &&
 		@!mkdir($path)) {
-		return false;
+		return array(
+			'redirect' => array(
+				'action' => 'view_thread',
+				'tid' => $tid,
+			),
+			'messages' => array('error' => 'Image folder could not be created.'),
+		);
 	}
 
 	$images = ppFetchRemoteFiles($images);
 	$images = ppGetImageInfo($images);
 
+	$success = $fail = 0;
 	foreach ($images as $id => $image) {
 		$uniqueID = uniqid();
 		$baseName = "{$image['tid']}-{$image['pid']}-{$uniqueID}";
@@ -87,7 +94,10 @@ function pp_thumbnails_process_images($images, $settings)
 		$filename = "{$path}/{$baseName}.{$image['extension']}";
 
 		if (ppResizeImage($image['tmp_url'], $filename, $settings['max_width'], $settings['max_height']) !== true) {
+			$fail++;
 			continue;
+		} else {
+			$success++;
 		}
 
 		@unlink($image['tmp_url']);
@@ -99,13 +109,23 @@ function pp_thumbnails_process_images($images, $settings)
 		$newImage->save();
 	}
 
-	$status = 'success';
-	$message = 'Thumbnail image(s) created successfully!';
+	$messages = array();
+	if ($success) {
+		$messages['success'] = $lang->sprintf('{1} thumbnail image(s) created successfully', $success);
+	}
+
+	if ($fail) {
+		$messages['error'] = $lang->sprintf('{1} thumbnail image(s) could not be created successfully', $fail);
+	}
+
+	if (!$success &&
+		!$fail) {
+		$messages['error'] = 'No valid image found.';
+	}
 
 	return array(
 		'redirect' => $redirectInfo,
-		'status' => $status,
-		'message' => $message,
+		'messages' => $messages,
 	);
 }
 
