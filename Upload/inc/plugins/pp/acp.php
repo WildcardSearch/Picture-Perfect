@@ -816,7 +816,10 @@ EOF;
 
 		$info = $module->processImages($images, $settings);
 
-		flash_message($info['message'], $info['status']);
+		foreach ((array) $info['messages'] as $status => $message) {
+			flash_message($message, $status);
+		}
+
 		admin_redirect($html->url($info['redirect']));
 	}
 
