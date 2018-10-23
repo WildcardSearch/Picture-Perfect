@@ -363,4 +363,47 @@ function ppStripQuotes($message)
 	return preg_replace($find, '', $message);
 }
 
+function ppReplacePostImage($pid, $currentUrl, $newUrl)
+{
+	global $db;
+
+	$pid = (int) $pid;
+	if (!$pid) {
+		return false;
+	}
+
+	$query = $db->simple_select('posts', 'message', "pid='{$pid}'");
+	$message = $db->fetch_field($query, 'message');
+
+	$message = str_replace($currentUrl, $newUrl, $message);
+
+	$db->update_query('posts', array('message' => $db->escape_string($message)), "pid='{$pid}'");
+
+	return $message;
+}
+
+/**
+ * trim preceding/trailing slashes
+ *
+ * @param  string
+ * @param  bool true to only check preceding slashes
+ * @return string clean path
+ */
+function ppCleanPath($path, $preOnly=false)
+{
+	if (substr($path, 0, 1) == '/') {
+		$path = substr($path, 1);
+	}
+
+	if ($preOnly) {
+		return $path;
+	}
+
+	if (substr($path, strlen($path) - 1) == '/') {
+		$path = substr($path, 0, strlen($path) - 1);
+	}
+
+	return $path;
+}
+
 ?>
