@@ -136,7 +136,7 @@ function pp_install()
 		'picture_perfect/rehost',
 		'picture_perfect/temp',
 	) as $folder) {
-		ppCreateFolder(MYBB_ROOT . "images/{$folder}");
+		ppCreateFolder(MYBB_ROOT."images/{$folder}");
 	}
 }
 
@@ -261,7 +261,7 @@ function ppCheckRequirements($deep = false)
 {
 	global $lang;
 
-	$forumStatus = is_writable(MYBB_ROOT . 'images/');
+	$forumStatus = is_writable(MYBB_ROOT.'images/');
 	if ($deep !== true &&
 		$forumStatus) {
 		return;
@@ -269,11 +269,11 @@ function ppCheckRequirements($deep = false)
 
 	$issues = '';
 	if (!$forumStatus) {
-		$issues .= '<br /><span style="font-family: Courier New; font-weight: bolder; font-size: small; color: black;">' . MYBB_ROOT . 'images/</span>';
+		$issues .= '<br /><span style="font-family: Courier New; font-weight: bolder; font-size: small; color: black;">'.MYBB_ROOT.'images/</span>';
 	}
 
 	if ($deep) {
-		$forumSubStatus = ppIsWritable(MYBB_ROOT . 'images/');
+		$forumSubStatus = ppIsWritable(MYBB_ROOT.'images/');
 
 		if ($forumStatus &&
 			$forumSubStatus) {
@@ -281,7 +281,7 @@ function ppCheckRequirements($deep = false)
 		}
 
 		if (!$forumSubStatus) {
-			$issues .= "<br /><span>{$lang->sprintf($lang->pp_subfolders_unwritable, MYBB_ROOT . 'images/</span>')}";
+			$issues .= "<br /><span>{$lang->sprintf($lang->pp_subfolders_unwritable, MYBB_ROOT.'images/</span>')}";
 		}
 		return "{$lang->pp_folders_requirement_warning}<br />{$issues}";
 	}
@@ -306,8 +306,8 @@ function ppIsWritable($rootFolder)
 			continue;
 		}
 
-		if (!is_writeable($rootFolder . $folder . "/") ||
-			!ppIsWritable($rootFolder . $folder . "/")) {
+		if (!is_writeable($rootFolder.$folder."/") ||
+			!ppIsWritable($rootFolder.$folder."/")) {
 			return false;
 		}
 	}

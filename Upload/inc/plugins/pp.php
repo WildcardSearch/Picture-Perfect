@@ -13,18 +13,18 @@ if (!defined('IN_MYBB')) {
 }
 
 define('PICTURE_PERFECT_VERSION', '0.0.3');
-define('PICTURE_PERFECT_MOD_URL', MYBB_ROOT . 'inc/plugins/pp/modules');
+define('PICTURE_PERFECT_MOD_URL', MYBB_ROOT.'inc/plugins/pp/modules');
 
 // register custom class autoloader
 spl_autoload_register('ppClassAutoLoad');
 
-require_once MYBB_ROOT . 'inc/plugins/pp/functions.php';
+require_once MYBB_ROOT.'inc/plugins/pp/functions.php';
 
 // load the install/admin routines only if in ACP.
 if (defined('IN_ADMINCP')) {
-    require_once MYBB_ROOT . 'inc/plugins/pp/acp.php';
+    require_once MYBB_ROOT.'inc/plugins/pp/acp.php';
 } else {
-	require_once MYBB_ROOT . 'inc/plugins/pp/forum.php';
+	require_once MYBB_ROOT.'inc/plugins/pp/forum.php';
 }
 
 /**
@@ -33,7 +33,7 @@ if (defined('IN_ADMINCP')) {
  * @param string the name of the class to load
  */
 function ppClassAutoLoad($className) {
-	$path = MYBB_ROOT . "inc/plugins/pp/classes/{$className}.php";
+	$path = MYBB_ROOT."inc/plugins/pp/classes/{$className}.php";
 
 	if (file_exists($path)) {
 		require_once $path;

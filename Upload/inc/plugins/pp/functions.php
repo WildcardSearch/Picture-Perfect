@@ -162,7 +162,7 @@ function ppFetchRemoteFiles($files)
 		if ($file['info']['http_code'] == 200) {
 			$file['content'] = curl_multi_getcontent($h);
 
-			$file['tmp_url'] = MYBB_ROOT . "images/picture_perfect/temp/temp_{$id}";
+			$file['tmp_url'] = MYBB_ROOT."images/picture_perfect/temp/temp_{$id}";
 			file_put_contents($file['tmp_url'], $file['content']);
 		} else {
 			$file['error'] = curl_error($h);

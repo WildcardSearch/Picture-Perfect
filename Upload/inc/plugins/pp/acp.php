@@ -13,7 +13,7 @@ if (!defined('IN_MYBB')) {
 	die('Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.');
 }
 define('PICTURE_PERFECT_URL', 'index.php?module=config-pp');
-require_once MYBB_ROOT . 'inc/plugins/pp/install.php';
+require_once MYBB_ROOT.'inc/plugins/pp/install.php';
 
 /**
  * the ACP page router
@@ -44,7 +44,7 @@ function pp_admin()
 	$modules = ppGetAllModules();
 
 	// if there is an existing function for the action
-	$page_function = 'pp_admin_' . $mybb->input['action'];
+	$page_function = 'pp_admin_'.$mybb->input['action'];
 	if (function_exists($page_function)) {
 		// run it
 		$page_function();
@@ -131,7 +131,7 @@ EOF;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
 		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url());
-		echo($pagination . '<br />');
+		echo($pagination.'<br />');
 	}
 
 	$limitSql = "LIMIT {$perPage}";
@@ -320,7 +320,7 @@ EOF;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
 		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'sets')));
-		echo($pagination . '<br />');
+		echo($pagination.'<br />');
 	}
 
 	$query = $db->simple_select('pp_image_sets', '*', '', array('order_by' => 'title ASC', 'limit_start' => $start, 'limit' => $perPage));
@@ -475,7 +475,7 @@ EOF;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
 		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_thread', 'tid' => $tid)));
-		echo($pagination . '<br />');
+		echo($pagination.'<br />');
 	}
 
 	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0", array('limit_start' => $start, 'limit' => $perPage));
@@ -514,7 +514,7 @@ EOF;
 
 	$checkbox = $form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all'));
 
-	$table->output($lang->pp_images . $checkbox);
+	$table->output($lang->pp_images.$checkbox);
 
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
@@ -684,7 +684,7 @@ EOF;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
 		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_set', 'id' => $id)));
-		echo($pagination . '<br />');
+		echo($pagination.'<br />');
 	}
 
 	$query = $db->simple_select('pp_images', '*', "setid={$id}", array('limit_start' => $start, 'limit' => $perPage));
@@ -723,7 +723,7 @@ EOF;
 
 	$checkbox = $form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all'));
 
-	$table->output($lang->pp_image_set . " &mdash; {$imageSet->get('title')}" . $checkbox);
+	$table->output($lang->pp_image_set." &mdash; {$imageSet->get('title')}".$checkbox);
 	$form->end();
 	echo('<br />');
 
@@ -838,7 +838,7 @@ EOF;
 	<br />
 EOF;
 	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'finalize')), 'post');
-	$formContainer = new FormContainer($module->get('title') . ' Settings');
+	$formContainer = new FormContainer($module->get('title').' Settings');
 
 	if ($module->get('createsSet')) {
 		$setArray = array('new' => 'new set');
@@ -1062,7 +1062,7 @@ EOF;
 
 	$form_container->output_cell("<label>{$lang->pp_analyze_posted_images}</label><div class=\"description\">{$lang->pp_analyze_posted_images_description}</div>");
 	$form_container->output_cell($form->generate_numeric_field('posts_per_page', $ppp, array('style' => 'width: 150px;', 'min' => 0)));
-	$form_container->output_cell($form->generate_submit_button($lang->go, array('name' => 'analyze_posts', 'class' => 'button_yes', 'id' => 'analyze_submit')) . $form->generate_hidden_field('start', $start) . $form->generate_hidden_field('count', $totalCount) . $form->generate_hidden_field('in_progress', 1) . $form->generate_hidden_field('action', 'scan'));
+	$form_container->output_cell($form->generate_submit_button($lang->go, array('name' => 'analyze_posts', 'class' => 'button_yes', 'id' => 'analyze_submit')).$form->generate_hidden_field('start', $start).$form->generate_hidden_field('count', $totalCount).$form->generate_hidden_field('in_progress', 1).$form->generate_hidden_field('action', 'scan'));
 	$form_container->construct_row();
 
 	$form_container->end();
