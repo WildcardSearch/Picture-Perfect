@@ -59,6 +59,7 @@ $l['pp_process_images_fail_no_images'] = 'no images';
 $l['pp_process_images_finalize_fail_could_not_create_set'] = 'The image set could not be created successfully.';
 $l['pp_process_images_finalize_success'] = 'Images processed successfully.{1}';
 $l['pp_process_images_finalize_success_extra'] = ' You may now customize the new image set.';
+$l['pp_process_images_fail_exceed_module_limit'] = 'You have selected more images than this module can process at once. The module limit is {1}';
 
 $l['pp_admin_sets'] = 'View Images Sets';
 $l['pp_admin_sets_desc'] = 'view and manage image sets';

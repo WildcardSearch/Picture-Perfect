@@ -7,7 +7,7 @@
  * module wrapper
  */
 
-class PicturePerfectModule extends ConfigurableModule010000
+class PicturePerfectModule extends ConfigurableModule010010
 {
 	/**
 	 * @var the path
@@ -22,12 +22,22 @@ class PicturePerfectModule extends ConfigurableModule010000
 	/**
 	 * @var
 	 */
-	protected $actionPhrase = 'Create Thumbnails';
+	protected $actionPhrase = '';
 
 	/**
 	 * @var
 	 */
 	protected $pageAction = '';
+
+	/**
+	 * @var
+	 */
+	protected $imageLimit = 1;
+
+	/**
+	 * @var
+	 */
+	protected $createsSet = true;
 
 	/**
 	 * run the module parser routine
@@ -36,10 +46,7 @@ class PicturePerfectModule extends ConfigurableModule010000
 	 */
 	public function processImages($images, $settings)
 	{
-		foreach (array('images', 'settings') as $key) {
-			$args[$key] = $$key;
-		}
-		return $this->run('process_images', $args);
+		return $this->run('process_images', $images, $settings);
 	}
 }
 

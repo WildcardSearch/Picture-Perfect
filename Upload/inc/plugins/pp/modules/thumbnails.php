@@ -19,6 +19,8 @@ function pp_thumbnails_info()
 		'description' => 'creates thumbnails from posted images',
 		'actionPhrase' => 'Create Thumbnails',
 		'pageAction' => 'view_thumbnails',
+		'imageLimit' => 12,
+		'createsSet' => true,
 		'version' => '1.0',
 		'settings' => array(
 			'max_width' => array(
@@ -43,41 +45,51 @@ function pp_thumbnails_info()
  * @param  array
  * @return void
  */
-function pp_thumbnails_process_images($args)
+function pp_thumbnails_process_images($images, $settings)
 {
-	global $html, $mybb;
-	extract($args);
+	global $html, $mybb, $lang;
+
 	$tid = $images[key($images)]['tid'];
 
 	$redirectAction = 'view_set';
-	$redirecMode = '';
+	$redirectMode = '';
 	$imageSet = new PicturePerfectImageSet($mybb->input['setid']);
 	if (!$imageSet->isValid()) {
 		$redirectAction = 'edit_set';
-		$redirecMode = 'new_set';
+		$redirectMode = 'new_set';
 		$imageSet->set('title', 'New Image Set');
 		$imageSet->save();
 	}
 
 	$setId = $imageSet->get('id');
 
-	$returnArray = array(
+	$redirectInfo = array(
 		'action' => $redirectAction,
-		'mode' => $redirecMode,
+		'mode' => $redirectMode,
 		'id' => $setId,
 	);
 
 	$basePath = "images/picture_perfect/thumbs/{$tid}-{$settings['max_width']}x{$settings['max_height']}";
-	$path = MYBB_ROOT . $basePath;
+	$path = MYBB_ROOT.$basePath;
 
 	if (!file_exists($path) &&
 		@!mkdir($path)) {
-		return false;
+		return array(
+			'redirect' => array(
+				'action' => 'view_thread',
+				'tid' => $tid,
+			),
+			'messages' => array(
+				'status' => 'error',
+				'message' => 'Image folder could not be created.',
+			),
+		);
 	}
 
 	$images = ppFetchRemoteFiles($images);
 	$images = ppGetImageInfo($images);
 
+	$success = $fail = 0;
 	foreach ($images as $id => $image) {
 		$uniqueID = uniqid();
 		$baseName = "{$image['tid']}-{$image['pid']}-{$uniqueID}";
@@ -85,7 +97,10 @@ function pp_thumbnails_process_images($args)
 		$filename = "{$path}/{$baseName}.{$image['extension']}";
 
 		if (ppResizeImage($image['tmp_url'], $filename, $settings['max_width'], $settings['max_height']) !== true) {
+			$fail++;
 			continue;
+		} else {
+			$success++;
 		}
 
 		@unlink($image['tmp_url']);
@@ -97,7 +112,33 @@ function pp_thumbnails_process_images($args)
 		$newImage->save();
 	}
 
-	return $returnArray;
+	$messages = array();
+	if ($success) {
+		$messages[] = array(
+			'status' => 'success',
+			'message' => $lang->sprintf('{1} thumbnail image(s) created successfully', $success),
+		);
+	}
+
+	if ($fail) {
+		$messages[] = array(
+			'status' => 'error',
+			'message' => $lang->sprintf('{1} thumbnail image(s) could not be created successfully', $fail),
+		);
+	}
+
+	if (!$success &&
+		!$fail) {
+		$messages[] = array(
+			'status' => 'error',
+			'message' => 'No valid image found.',
+		);
+	}
+
+	return array(
+		'redirect' => $redirectInfo,
+		'messages' => $messages,
+	);
 }
 
 ?>

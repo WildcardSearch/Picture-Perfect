@@ -694,13 +694,14 @@ EOF;
 		$images[$image['id']] = $image;
 	}
 
+	$cacheBuster = '?dateline='.TIME_NOW;
 	foreach ($images as $id => $image) {
 		$imageClass = '';
 		if (strpos($image['url'], $mybb->settings['bburl']) !== false) {
 			$imageClass = ' localImage';
 		}
 
-		$imageElement = $html->img($image['url'], array('class' => "thumbnail{$imageClass}"));
+		$imageElement = $html->img($image['url'].$cacheBuster, array('class' => "thumbnail{$imageClass}"));
 
 		$table->construct_cell($form->generate_check_box("selected_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')), array('class' => 'ppImage'), array('class' => 'ppImage'));
 
@@ -762,6 +763,11 @@ function pp_admin_process_images()
 		admin_redirect($redirectUrl);
 	}
 
+	if ($selectedCount > $module->get('imageLimit')) {
+		flash_message($lang->sprintf($lang->pp_process_images_fail_exceed_module_limit, $module->get('imageLimit')), 'error');
+		admin_redirect($redirectUrl);
+	}
+
 	$page->add_breadcrumb_item($lang->pp_admin_process_images);
 
 	// set up the page header
@@ -808,13 +814,13 @@ EOF;
 			}
 		}
 
-		$setArray = $module->processImages($images, $settings);
-		if (!$setArray['id']) {
-			flash_message($lang->pp_process_images_finalize_fail_could_not_create_set, 'error');
-		} else {
-			flash_message($lang->sprintf($lang->pp_process_images_finalize_success, $extra), 'success');
+		$info = $module->processImages($images, $settings);
+
+		foreach ((array) $info['messages'] as $m) {
+			flash_message($m['message'], $m['status']);
 		}
-		admin_redirect($html->url($setArray));
+
+		admin_redirect($html->url($info['redirect']));
 	}
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_process_images}");
@@ -834,14 +840,16 @@ EOF;
 	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'finalize')), 'post');
 	$formContainer = new FormContainer($module->get('title') . ' Settings');
 
-	$setArray = array('new' => 'new set');
+	if ($module->get('createsSet')) {
+		$setArray = array('new' => 'new set');
 
-	$query = $db->simple_select('pp_image_sets', 'id,title');
-	while ($set = $db->fetch_array($query)) {
-		$setArray[$set['id']] = $set['title'];
+		$query = $db->simple_select('pp_image_sets', 'id,title');
+		while ($set = $db->fetch_array($query)) {
+			$setArray[$set['id']] = $set['title'];
+		}
+
+		$formContainer->output_row($lang->pp_image_set, $lang->pp_image_set_desc, $form->generate_select_box('setid', $setArray, 'new', array('id' => 'setting_setid')), 'setid', array('id' => 'setting_setid'));
 	}
-
-	$formContainer->output_row($lang->pp_image_set, $lang->pp_image_set_desc, $form->generate_select_box('setid', $setArray, 'new', array('id' => 'setting_setid')), 'setid', array('id' => 'setting_setid'));
 
 	$module->outputSettings($formContainer);
 

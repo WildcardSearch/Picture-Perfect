@@ -12,7 +12,7 @@ if (!defined('IN_MYBB')) {
     die('Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.');
 }
 
-define('PICTURE_PERFECT_VERSION', '0.0.2');
+define('PICTURE_PERFECT_VERSION', '0.0.3');
 define('PICTURE_PERFECT_MOD_URL', MYBB_ROOT . 'inc/plugins/pp/modules');
 
 // register custom class autoloader
