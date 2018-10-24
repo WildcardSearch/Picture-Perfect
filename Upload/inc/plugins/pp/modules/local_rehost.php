@@ -86,6 +86,13 @@ function pp_local_rehost_process_images($images, $settings)
 	// main loop - process the images
 	$fail = $success = 0;
 	foreach ($images as $id => $image) {
+		// already local?
+		if (strpos($image['url'], $mybb->settings['bburl']) !== false) {
+			$fail++;
+			$alreadyRehosted++;
+			continue;
+		}
+
 		$uniqueID = uniqid();
 		$baseName = "{$image['tid']}-{$image['pid']}-{$uniqueID}";
 
@@ -155,10 +162,24 @@ function pp_local_rehost_process_images($images, $settings)
 	}
 
 	if ($fail) {
-		$messages[] = array(
-			'status' => 'error',
-			'message' => $lang->sprintf('{1} image(s) could not be locally rehosted successfully', $fail)
-		);
+		if ($alreadyRehosted) {
+			if ($alreadyRehosted != $fail) {
+				$messages[] = array(
+					'status' => 'success',
+					'message' => $lang->sprintf('{1} image(s) could not be successfully rehosted locally, {2} because the image(s) were already hosted locally', $fail, $alreadyRehosted),
+				);
+			} else {
+				$messages[] = array(
+					'status' => 'error',
+					'message' => $lang->sprintf('{1} image(s) could not be successfully rehosted locally because the image(s) were already hosted locally', $alreadyRehosted),
+				);
+			}
+		} else {
+			$messages[] = array(
+				'status' => 'error',
+				'message' => $lang->sprintf('{1} image(s) could not be successfully rehosted locally', $fail),
+			);
+		}
 	}
 
 	return array(
