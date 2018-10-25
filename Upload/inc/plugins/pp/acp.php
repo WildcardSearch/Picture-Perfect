@@ -12,6 +12,7 @@
 if (!defined('IN_MYBB')) {
 	die('Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.');
 }
+
 define('PICTURE_PERFECT_URL', 'index.php?module=config-pp');
 require_once MYBB_ROOT.'inc/plugins/pp/install.php';
 
@@ -87,7 +88,9 @@ EOF;
 	pp_output_tabs('pp');
 
 	$table = new Table;
-	$table->construct_header('Forum', array('width' => '100%'));
+	$table->construct_header('Forum');
+	$table->construct_header('Description');
+	$table->construct_header('Image Count');
 
 	ppBuildForumList($table, $fid);
 
@@ -161,7 +164,7 @@ EOF;
 	$table->construct_header($lang->pp_image_count, array('width' => '15%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
 
-	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
 	if (!isset($mybb->input['page']) ||
 		$mybb->input['page'] == '' ||
 		(int) $mybb->input['page'] < 1) {
@@ -289,7 +292,7 @@ EOF;
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_thread}");
 	pp_output_tabs('pp_view_thread', $threadTitle, $tid);
 
-	// get a total count on the YourCodes
+	// get a total count on the items
 	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "tid={$tid} AND setid=0");
 	$resultCount = $db->fetch_field($query, 'resultCount');
 
@@ -324,7 +327,7 @@ EOF;
 
 	$table = new Table;
 
-	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
 	if (!isset($mybb->input['page']) ||
 		$mybb->input['page'] == '' ||
 		(int) $mybb->input['page'] < 1) {
@@ -482,7 +485,6 @@ EOF;
 		if ($success) {
 			// yay for us
 			flash_message($lang->sprintf($lang->pp_message_success, $lang->pp_image_sets, $lang->pp_deleted), 'success');
-			yourcode_build_cache();
 		} else {
 			// boo, we suck
 			flash_message($lang->sprintf($lang->pp_message_fail, $lang->pp_image_sets, $lang->pp_deleted), 'error');
@@ -493,7 +495,7 @@ EOF;
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_sets}");
 	pp_output_tabs('pp_sets');
 
-	// get a total count on the YourCodes
+	// get a total count on the items
 	$query = $db->simple_select('pp_image_sets', 'COUNT(id) AS resultCount');
 	$resultCount = $db->fetch_field($query, 'resultCount');
 
@@ -523,7 +525,7 @@ EOF;
 	$table->construct_header($lang->pp_delete, array('width' => '10%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
 
-	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
 	if (!isset($mybb->input['page']) ||
 		$mybb->input['page'] == '' ||
 		(int) $mybb->input['page'] < 1) {
@@ -690,7 +692,7 @@ EOF;
 	$id = (int) $mybb->input['id'];
 	$imageSet = new PicturePerfectImageSet($id);
 
-	// get a total count on the YourCodes
+	// get a total count on the items
 	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "setid={$id}");
 	$resultCount = $db->fetch_field($query, 'resultCount');
 
@@ -715,7 +717,7 @@ EOF;
 
 	$table = new Table;
 
-	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
 	if (!isset($mybb->input['page']) ||
 		$mybb->input['page'] == '' ||
 		(int) $mybb->input['page'] < 1) {
@@ -887,6 +889,7 @@ EOF;
 	</div>
 	<br />
 EOF;
+
 	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'finalize')), 'post');
 	$formContainer = new FormContainer($module->get('title').' Settings');
 
@@ -1201,6 +1204,8 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 }
 
 /**
+ * simplified rewrite of build_admincp_forums_list to use tables
+ *
  * @param  DefaultTable
  * @param  int
  * @param  int
@@ -1211,6 +1216,7 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 	global $mybb, $lang, $db, $sub_forums;
 	static $allForums;
 
+	// load the forum cache if necessary
 	if (!is_array($allForums)) {
 		$forumCache = cache_forums();
 
@@ -1231,22 +1237,35 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 				$forum['name'] = "<em>{$forum['name']}</em>";
 			}
 
+			// category
 			if ($forum['type'] == 'c') {
 				$table->construct_cell("<div style=\"padding-left: ".(10*($depth-1))."px;\"><strong>{$forum['name']}</strong></div>");
+				$table->construct_cell("<span style=\"font-style: italic;\">{$forum['description']}</span>");
+				$table->construct_cell('');
 				$table->construct_row();
 
 				// Does this category have any sub forums?
 				if ($allForums[$forum['fid']]) {
 					ppBuildForumList($table, $forum['fid'], $depth+1);
 				}
+			// forum
 			} elseif ($forum['type'] == 'f') {
 				$query = $db->simple_select('pp_images', 'COUNT(id) as images', "fid='{$forum['fid']}'");
 				$imageCount = (int) $db->fetch_field($query, 'images');
+
+				$imageCountStyle = 'font-weight: bold; color: blue;';
+				$forumNameStyle = '';
+				$forumLink = "<a href=\"index.php?module=config-pp&amp;action=view_threads&amp;fid={$forum['fid']}\" style=\"font-weight: bold;\">{$forum['name']}</a>";
 				if (!$imageCount) {
-					$table->construct_cell("<div style=\"color: gray; font-style: italic; padding-left: ".(10*($depth-1))."px;\">{$forum['name']}{$forum['description']}</div>");
-				} else {
-					$table->construct_cell("<div style=\"padding-left: ".(10*($depth-1))."px;\"><a href=\"index.php?module=config-pp&amp;action=view_threads&amp;fid={$forum['fid']}\">{$forum['name']}</a>{$forum['description']}</div>");
+					$forumNameStyle = 'color: gray; font-style: italic; ';
+					$forumLink = $forum['name'];
+					$imageCountStyle = 'color: gray;';
 				}
+
+				$table->construct_cell("<div style=\"{$forumNameStyle}padding-left: ".(10*($depth-1))."px;\">{$forumLink}</div>");
+				$table->construct_cell("<span style=\"font-style: italic;\">{$forum['description']}</span>");
+				$table->construct_cell("<span style=\"{$imageCountStyle}\">{$imageCount}</span>");
+
 				$table->construct_row();
 
 				if (isset($allForums[$forum['fid']])) {
