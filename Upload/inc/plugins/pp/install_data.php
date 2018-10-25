@@ -11,7 +11,8 @@ $tables = array(
 	'pgsql' => array(
 		'pp_image_threads' => array(
 			'id' => 'SERIAL',
-			'tid' => 'INT',
+			'tid' => 'INT NOT NULL',
+			'fid' => 'INT NOT NULL',
 			'image_count' => 'INT',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
@@ -20,6 +21,7 @@ $tables = array(
 			'setid' => 'INT',
 			'pid' => 'INT NOT NULL',
 			'tid' => 'INT NOT NULL',
+			'fid' => 'INT NOT NULL',
 			'url' => 'TEXT NOT NULL',
 			'caption' => 'TEXT',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
@@ -33,7 +35,8 @@ $tables = array(
 	),
 	'pp_image_threads' => array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
-		'tid' => 'INT(10)',
+		'tid' => 'INT(10) NOT NULL',
+		'fid' => 'INT(10) NOT NULL',
 		'image_count' => 'INT(10)',
 		'dateline' => 'INT(10)',
 	),
@@ -42,6 +45,7 @@ $tables = array(
 		'setid' => 'INT(10)',
 		'pid' => 'INT(10) NOT NULL',
 		'tid' => 'INT(10) NOT NULL',
+		'fid' => 'INT(10) NOT NULL',
 		'url' => 'TEXT NOT NULL',
 		'caption' => 'TEXT',
 		'dateline' => 'INT(10)',

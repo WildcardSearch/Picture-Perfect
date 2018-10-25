@@ -263,7 +263,7 @@ function ppResizeImage($source, $destination, $width, $height, $crop=false)
  * @param  int
  * @return string
  */
-function ppStorePostedImages($pid, $tid, $message)
+function ppStorePostedImages($pid, $tid, $fid, $message)
 {
 	global $db;
 
@@ -273,6 +273,7 @@ function ppStorePostedImages($pid, $tid, $message)
 			'setid' => 0,
 			'pid' => (int) $pid,
 			'tid' => (int) $tid,
+			'fid' => (int) $fid,
 			'url' => $db->escape_string($source),
 			'dateline' => TIME_NOW,
 		);

@@ -76,7 +76,7 @@ function ppModerationDoDeleteThread($tid)
  */
 function ppModerationDoMerge($args)
 {
-	global $mybb, $db;
+	global $db;
 
 	extract($args);
 
@@ -91,8 +91,11 @@ function ppModerationDoMerge($args)
 		$newCount = (int) $currentCount+$movedImageCount;
 		$db->update_query('pp_image_threads', array('image_count' => $newCount), "tid='{$tid}'");
 	} else {
+		$query = $db->simple_select('threads', 'fid', "tid='{$tid}'");
+		$fid = $db->fetch_field($query, 'fid');
 		$insertArray = array(
 			'tid' => $tid,
+			'fid' => $fid,
 			'image_count' => $newCount,
 			'dateline' => TIME_NOW,
 		);
@@ -115,13 +118,14 @@ function ppEditPost($thisPost)
 
 	$tid = (int) $thisPost->data['tid'];
 	$pid = (int) $thisPost->data['pid'];
+	$fid = (int) $thisPost->data['fid'];
 
 	$query = $db->simple_select('pp_images', 'COUNT(pid) as imageCount', "pid='{$pid}' AND setid='0'");
 	$oldImageCount = $db->fetch_field($query, 'imageCount');
 
 	$db->delete_query('pp_images', "pid='{$pid}' AND setid='0'");
 
-	$updatedImageCount = ppStorePostedImages($pid, $tid, $thisPost->data['message']);
+	$updatedImageCount = ppStorePostedImages($pid, $tid, $fid, $thisPost->data['message']);
 
 	$query = $db->simple_select('pp_image_threads', 'image_count', "tid='{$tid}'");
 
@@ -134,6 +138,7 @@ function ppEditPost($thisPost)
 	} else {
 		$insertArray = array(
 			'tid' => $tid,
+			'fid' => $fid,
 			'image_count' => $updatedImageCount,
 			'dateline' => TIME_NOW,
 		);
@@ -149,7 +154,7 @@ function ppEditPost($thisPost)
  */
 function ppNewPost()
 {
-	global $mybb, $db, $pid, $tid, $post;
+	global $mybb, $db, $pid, $tid, $fid, $post;
 
 	$message = $post['message'];
 	// if creating a new thread the message comes from $_POST
@@ -158,7 +163,7 @@ function ppNewPost()
 		$message = $mybb->input['message'];
 	}
 
-	$imageCount = ppStorePostedImages($pid, $tid, $message);
+	$imageCount = ppStorePostedImages($pid, $tid, $fid, $message);
 
 	$query = $db->simple_select('pp_image_threads', 'image_count', "tid='{$tid}'");
 
@@ -169,6 +174,7 @@ function ppNewPost()
 	} else {
 		$insertArray = array(
 			'tid' => $tid,
+			'fid' => $fid,
 			'image_count' => $imageCount,
 			'dateline' => TIME_NOW,
 		);

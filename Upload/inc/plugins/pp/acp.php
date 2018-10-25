@@ -39,7 +39,7 @@ function pp_admin()
 	}
 
 	// URL, link and image markup generator
-	$html = new HTMLGenerator010000(PICTURE_PERFECT_URL, array('ajax'));
+	$html = new HTMLGenerator010000(PICTURE_PERFECT_URL, array('ajax', 'fid'));
 
 	$modules = ppGetAllModules();
 
@@ -65,6 +65,55 @@ function pp_admin_main()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
 
+	$lang->load('forum_management');
+
+	if (!isset($mybb->input['fid'])) {
+		$mybb->input['fid'] = 0;
+	}
+
+	$fid = $mybb->get_input('fid', MyBB::INPUT_INT);
+	if ($fid) {
+		$forum = get_forum($fid);
+	}
+
+	$page->add_breadcrumb_item($lang->pp_admin_main);
+
+	// set up the page header
+	$page->extra_header .= <<<EOF
+
+EOF;
+
+	$page->output_header("{$lang->pp} &mdash; View Forums");
+	pp_output_tabs('pp');
+
+	$table = new Table;
+	$table->construct_header('Forum', array('width' => '100%'));
+
+	ppBuildForumList($table, $fid);
+
+	$table->output('Forums');
+
+	$page->output_footer();
+}
+
+/**
+ * view threads with images
+ *
+ * @return void
+ */
+function pp_admin_view_threads()
+{
+	global $mybb, $db, $page, $lang, $html, $min;
+
+	if (!isset($mybb->input['fid'])) {
+		$mybb->input['fid'] = 0;
+	}
+
+	$fid = $mybb->get_input('fid', MyBB::INPUT_INT);
+	if ($fid) {
+		$forum = get_forum($fid);
+	}
+
 	$page->add_breadcrumb_item($lang->pp_admin_main);
 
 	// set up the page header
@@ -81,10 +130,10 @@ function pp_admin_main()
 
 EOF;
 
-	$page->output_header("{$lang->pp} - {$lang->pp_admin_main}");
-	pp_output_tabs('pp');
+	$page->output_header("{$lang->pp} - {$lang->pp_admin_main} - {$forum['name']}");
+	pp_output_tabs('pp_view_threads');
 
-	$query = $db->simple_select('pp_image_threads', 'COUNT(id) as resultCount');
+	$query = $db->simple_select('pp_image_threads', 'COUNT(id) as resultCount', "fid='{$fid}'");
 	$resultCount = $db->fetch_field($query, 'resultCount');
 
 	$perPage = 10;
@@ -130,7 +179,7 @@ EOF;
 	$start = ($mybb->input['page'] - 1) * $perPage;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
-		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url());
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_threads', 'fid' => $fid)));
 		echo($pagination.'<br />');
 	}
 
@@ -143,6 +192,7 @@ EOF;
 		SELECT i.id, i.tid, i.image_count, t.subject
 		FROM {$db->table_prefix}pp_image_threads i
 		LEFT JOIN {$db->table_prefix}threads t ON(t.tid=i.tid)
+		WHERE i.fid='{$fid}'
 		ORDER BY tid ASC
 		{$limitSql}
 EOF;
@@ -167,6 +217,178 @@ EOF;
 	}
 
 	$table->output($lang->pp_image_threads);
+	$form->end();
+	echo('<br />');
+
+	// more than one page?
+	if ($resultCount > $perPage) {
+		// if so show pagination on the right this time just to be weird
+		echo($pagination);
+	}
+
+	$page->output_footer();
+}
+
+/**
+ * view image threads
+ *
+ * @return void
+ */
+function pp_admin_view_thread()
+{
+	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
+
+	$page->add_breadcrumb_item($lang->pp_admin_view_thread);
+
+	$selected = $mybb->input['selected_ids'];
+	$tid = (int) $mybb->input['tid'];
+	$titleQuery = $db->simple_select('threads', 'subject', "tid={$tid}");
+	$threadTitle = $db->fetch_field($titleQuery, 'subject');
+
+	// set up the page header
+	$page->extra_header .= <<<EOF
+	<script type="text/javascript" src="jscripts/pp/inline{$min}.js"></script>
+	<script type="text/javascript">
+	<!--
+	PP.inline.setup({
+		go: '{$lang->go}',
+		noSelection: '{$lang->pp_inline_selection_error}',
+	});
+	// -->
+	</script>
+
+	<style>
+		.pp_select_all {
+			float: right;
+		}
+
+		td.selectedImage {
+			background: #0083ff !important;
+		}
+
+		td.ppImage {
+			text-align: center;
+		}
+
+		td.emptyCell {
+			border: none !important;
+		}
+
+		.thumbnail {
+			width: 240px;
+			cursor: pointer;
+		}
+
+		img.localImage {
+			border: 4px solid green;
+		}
+	</style>
+
+EOF;
+
+	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_thread}");
+	pp_output_tabs('pp_view_thread', $threadTitle, $tid);
+
+	// get a total count on the YourCodes
+	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "tid={$tid} AND setid=0");
+	$resultCount = $db->fetch_field($query, 'resultCount');
+
+	$perPage = 12;
+	$totalPages = ceil($resultCount / $perPage);
+
+	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'configure')), 'post');
+
+	if (is_array($modules) &&
+		!empty($modules)) {
+		$options = '';
+		foreach ($modules as $key => $module) {
+			$options .= <<<EOF
+
+			<option value="{$key}">{$module->get('actionPhrase')}</option>
+EOF;
+		}
+
+		echo <<<EOF
+<div>
+	<span>
+		<strong>{$lang->pp_inline_title}:</strong>&nbsp;
+		<select name="addon">{$options}
+		</select>
+		<input id="pp_inline_submit" type="submit" class="button" name="pp_inline_submit" value="{$lang->go} ({$selectedCount})"/>
+		<input id="pp_inline_clear" type="button" class="button" name="pp_inline_clear" value="{$lang->clear}"/>
+	</span>
+</div>
+<br />
+EOF;
+	}
+
+	$table = new Table;
+
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
+	if (!isset($mybb->input['page']) ||
+		$mybb->input['page'] == '' ||
+		(int) $mybb->input['page'] < 1) {
+		// no page, page = 1
+		$mybb->input['page'] = 1;
+	} else if ($mybb->input['page'] > $totalPages) {
+		// past last page? page = last page
+		$mybb->input['page'] = $totalPages;
+	} else {
+		// in range? page = # in link
+		$mybb->input['page'] = (int) $mybb->input['page'];
+	}
+
+	// more than one page?
+	$start = ($mybb->input['page'] - 1) * $perPage;
+	if ($resultCount > $perPage) {
+		// save the pagination for below and show it here as well
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_thread', 'tid' => $tid)));
+		echo($pagination.'<br />');
+	}
+
+	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0", array('limit_start' => $start, 'limit' => $perPage));
+
+	$count = 0;
+	$images = array();
+	while ($image = $db->fetch_array($query)) {
+		$images[$image['id']] = $image;
+	}
+
+	foreach ($images as $id => $image) {
+		$imageClass = '';
+		if (strpos($image['url'], $mybb->settings['bburl']) !== false) {
+			$imageClass = ' localImage';
+		}
+
+		$imageElement = $html->img($image['url'], array('class' => "thumbnail{$imageClass}"));
+
+		$table->construct_cell($form->generate_check_box("selected_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')), array('class' => 'ppImage'), array('class' => 'ppImage'));
+
+		$count++;
+		if ($count == 4) {
+			$count = 0;
+			$table->construct_row();
+		}
+	}
+
+	if ($count > 0 &&
+		$count < 4) {
+		while ($count < 4) {
+			$table->construct_cell('', array('class' => 'emptyCell'));
+			$count++;
+		}
+		$table->construct_row();
+	}
+
+	$checkbox = $form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all'));
+
+	$table->output($lang->pp_images.$checkbox);
+
+	foreach ((array) $selected as $id => $throwAway) {
+		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
+	}
+	echo $form->generate_hidden_field('tid', $tid);
+
 	$form->end();
 	echo('<br />');
 
@@ -349,178 +571,6 @@ EOF;
 	}
 
 	$table->output($lang->pp_image_sets);
-	$form->end();
-	echo('<br />');
-
-	// more than one page?
-	if ($resultCount > $perPage) {
-		// if so show pagination on the right this time just to be weird
-		echo($pagination);
-	}
-
-	$page->output_footer();
-}
-
-/**
- * view image threads
- *
- * @return void
- */
-function pp_admin_view_thread()
-{
-	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
-
-	$page->add_breadcrumb_item($lang->pp_admin_view_thread);
-
-	$selected = $mybb->input['selected_ids'];
-	$tid = (int) $mybb->input['tid'];
-	$titleQuery = $db->simple_select('threads', 'subject', "tid={$tid}");
-	$threadTitle = $db->fetch_field($titleQuery, 'subject');
-
-	// set up the page header
-	$page->extra_header .= <<<EOF
-	<script type="text/javascript" src="jscripts/pp/inline{$min}.js"></script>
-	<script type="text/javascript">
-	<!--
-	PP.inline.setup({
-		go: '{$lang->go}',
-		noSelection: '{$lang->pp_inline_selection_error}',
-	});
-	// -->
-	</script>
-
-	<style>
-		.pp_select_all {
-			float: right;
-		}
-
-		td.selectedImage {
-			background: #0083ff !important;
-		}
-
-		td.ppImage {
-			text-align: center;
-		}
-
-		td.emptyCell {
-			border: none !important;
-		}
-
-		.thumbnail {
-			width: 240px;
-			cursor: pointer;
-		}
-
-		img.localImage {
-			border: 4px solid green;
-		}
-	</style>
-
-EOF;
-
-	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_thread}");
-	pp_output_tabs('pp_view_thread', $threadTitle, $tid);
-
-	// get a total count on the YourCodes
-	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "tid={$tid} AND setid=0");
-	$resultCount = $db->fetch_field($query, 'resultCount');
-
-	$perPage = 12;
-	$totalPages = ceil($resultCount / $perPage);
-
-	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'configure')), 'post');
-
-	if (is_array($modules) &&
-		!empty($modules)) {
-		$options = '';
-		foreach ($modules as $key => $module) {
-			$options .= <<<EOF
-
-			<option value="{$key}">{$module->get('actionPhrase')}</option>
-EOF;
-		}
-
-		echo <<<EOF
-<div>
-	<span>
-		<strong>{$lang->pp_inline_title}:</strong>&nbsp;
-		<select name="addon">{$options}
-		</select>
-		<input id="pp_inline_submit" type="submit" class="button" name="pp_inline_submit" value="{$lang->go} ({$selectedCount})"/>
-		<input id="pp_inline_clear" type="button" class="button" name="pp_inline_clear" value="{$lang->clear}"/>
-	</span>
-</div>
-<br />
-EOF;
-	}
-
-	$table = new Table;
-
-	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last YourCode on page)
-	if (!isset($mybb->input['page']) ||
-		$mybb->input['page'] == '' ||
-		(int) $mybb->input['page'] < 1) {
-		// no page, page = 1
-		$mybb->input['page'] = 1;
-	} else if ($mybb->input['page'] > $totalPages) {
-		// past last page? page = last page
-		$mybb->input['page'] = $totalPages;
-	} else {
-		// in range? page = # in link
-		$mybb->input['page'] = (int) $mybb->input['page'];
-	}
-
-	// more than one page?
-	$start = ($mybb->input['page'] - 1) * $perPage;
-	if ($resultCount > $perPage) {
-		// save the pagination for below and show it here as well
-		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_thread', 'tid' => $tid)));
-		echo($pagination.'<br />');
-	}
-
-	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0", array('limit_start' => $start, 'limit' => $perPage));
-
-	$count = 0;
-	$images = array();
-	while ($image = $db->fetch_array($query)) {
-		$images[$image['id']] = $image;
-	}
-
-	foreach ($images as $id => $image) {
-		$imageClass = '';
-		if (strpos($image['url'], $mybb->settings['bburl']) !== false) {
-			$imageClass = ' localImage';
-		}
-
-		$imageElement = $html->img($image['url'], array('class' => "thumbnail{$imageClass}"));
-
-		$table->construct_cell($form->generate_check_box("selected_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')), array('class' => 'ppImage'), array('class' => 'ppImage'));
-
-		$count++;
-		if ($count == 4) {
-			$count = 0;
-			$table->construct_row();
-		}
-	}
-
-	if ($count > 0 &&
-		$count < 4) {
-		while ($count < 4) {
-			$table->construct_cell('', array('class' => 'emptyCell'));
-			$count++;
-		}
-		$table->construct_row();
-	}
-
-	$checkbox = $form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all'));
-
-	$table->output($lang->pp_images.$checkbox);
-
-	foreach ((array) $selected as $id => $throwAway) {
-		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
-	}
-	echo $form->generate_hidden_field('tid', $tid);
-
 	$form->end();
 	echo('<br />');
 
@@ -975,7 +1025,7 @@ function pp_admin_scan()
 
 		$done = false;
 
-		$query = $db->simple_select('posts', 'pid, tid, message', '', array('limit' => $ppp, 'limit_start' => $start, 'order_by' => 'dateline', 'order_dir', 'ASC'));
+		$query = $db->simple_select('posts', 'pid, tid, fid, message', '', array('limit' => $ppp, 'limit_start' => $start, 'order_by' => 'dateline', 'order_dir', 'ASC'));
 
 		$count = $db->num_rows($query);
 		if ($count == 0 ||
@@ -986,12 +1036,13 @@ function pp_admin_scan()
 		$insert_arrays = array();
 		while ($post = $db->fetch_array($query)) {
 			foreach ((array) ppGetPostImages($post['message']) as $source) {
-				$threadCache[$post['tid']]++;
+				$threadCache["{$post['fid']}-{$post['tid']}"]++;
 
 				$insert_arrays[] = array(
 					'setid' => 0,
 					'pid' => (int) $post['pid'],
 					'tid' => (int) $post['tid'],
+					'fid' => (int) $post['fid'],
 					'url' => $source,
 					'dateline' => TIME_NOW,
 				);
@@ -1005,9 +1056,13 @@ function pp_admin_scan()
 		if ($done) {
 			$insert_arrays = array();
 
-			foreach ($threadCache as $tid => $count) {
+			foreach ($threadCache as $key => $count) {
+				$keyPieces = explode('-', $key);
+				list($fid, $tid) = $keyPieces;
+				
 				$insert_arrays[] = array(
 					'tid' => (int) $tid,
+					'fid' => (int) $fid,
 					'image_count' => (int) $count,
 					'dateline' => TIME_NOW,
 				);
@@ -1084,15 +1139,9 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 	global $page, $lang, $mybb, $html, $modules;
 
 	$subTabs['pp'] = array(
-		'title' => $lang->pp_image_threads,
+		'title' => 'Forums',
 		'link' => $html->url(),
-		'description' => $lang->pp_admin_edit_set_desc,
-	);
-
-	$subTabs['pp_sets'] = array(
-		'title' => $lang->pp_admin_sets,
-		'link' => $html->url(array('action' => 'sets')),
-		'description' => $lang->pp_admin_sets_desc,
+		'description' => 'a forum list for navigation',
 	);
 
 	switch ($current) {
@@ -1101,6 +1150,13 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 			'title' => $lang->pp_admin_view_set,
 			'link' => $html->url(array('action' => 'view_set')),
 			'description' => $lang->pp_admin_view_set_desc,
+		);
+		break;
+	case 'pp_view_threads':
+		$subTabs['pp_view_threads'] = array(
+			'title' => $lang->pp_image_threads,
+			'link' => $html->url(array('action' => 'view_threads')),
+			'description' => 'view all threads in the forum that contain images',
 		);
 		break;
 	case 'pp_view_thread':
@@ -1135,7 +1191,70 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 		break;
 	}
 
+	$subTabs['pp_sets'] = array(
+		'title' => $lang->pp_admin_sets,
+		'link' => $html->url(array('action' => 'sets')),
+		'description' => $lang->pp_admin_sets_desc,
+	);
+
 	$page->output_nav_tabs($subTabs, $current);
+}
+
+/**
+ * @param  DefaultTable
+ * @param  int
+ * @param  int
+ * @return void
+ */
+function ppBuildForumList(&$table, $pid=0, $depth=1)
+{
+	global $mybb, $lang, $db, $sub_forums;
+	static $allForums;
+
+	if (!is_array($allForums)) {
+		$forumCache = cache_forums();
+
+		foreach ($forumCache as $forum) {
+			$allForums[$forum['pid']][$forum['disporder']][$forum['fid']] = $forum;
+		}
+	}
+
+	if (!is_array($allForums[$pid])) {
+		return;
+	}
+
+	foreach ($allForums[$pid] as $children) {
+		foreach ($children as $forum) {
+			$forum['name'] = preg_replace("#&(?!\#[0-9]+;)#si", '&amp;', $forum['name']);
+
+			if ($forum['active'] == 0) {
+				$forum['name'] = "<em>{$forum['name']}</em>";
+			}
+
+			if ($forum['type'] == 'c') {
+				$table->construct_cell("<div style=\"padding-left: ".(10*($depth-1))."px;\"><strong>{$forum['name']}</strong></div>");
+				$table->construct_row();
+
+				// Does this category have any sub forums?
+				if ($allForums[$forum['fid']]) {
+					ppBuildForumList($table, $forum['fid'], $depth+1);
+				}
+			} elseif ($forum['type'] == 'f') {
+				$query = $db->simple_select('pp_images', 'COUNT(id) as images', "fid='{$forum['fid']}'");
+				$imageCount = (int) $db->fetch_field($query, 'images');
+				if (!$imageCount) {
+					$table->construct_cell("<div style=\"color: gray; font-style: italic; padding-left: ".(10*($depth-1))."px;\">{$forum['name']}{$forum['description']}</div>");
+				} else {
+					$table->construct_cell("<div style=\"padding-left: ".(10*($depth-1))."px;\"><a href=\"index.php?module=config-pp&amp;action=view_threads&amp;fid={$forum['fid']}\">{$forum['name']}</a>{$forum['description']}</div>");
+				}
+				$table->construct_row();
+
+				if (isset($allForums[$forum['fid']])) {
+					ppBuildForumList($table, $forum['fid'], $depth+1);
+				}
+			}
+		}
+	}
 }
 
 ?>
