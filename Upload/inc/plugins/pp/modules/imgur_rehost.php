@@ -14,6 +14,8 @@
  */
 function pp_imgur_rehost_info()
 {
+	global $mybb;
+
 	return array(
 		'title' => 'Imgur Rehosts',
 		'description' => 'rehost posted images to Imgur',
@@ -27,7 +29,19 @@ function pp_imgur_rehost_info()
 				'title' => 'Imgur Application Access Token',
 				'description' => 'in order to use this module, you must first register an application with Imgur and receive an access token to be used for anonymous upload',
 				'optionscode' => 'text',
-				'value' => '',
+				'value' => $mybb->settings['pp_accessToken'],
+			),
+		),
+		'installData' => array(
+			'settings' => array(
+				'pp_accessToken' => array(
+					'name' => 'pp_accessToken',
+					'title' => 'Imgur Application Access Token',
+					'description' => 'in order to use this module, you must first register an application with Imgur and receive an access token to be used for anonymous upload',
+					'optionscode' => 'text',
+					'value' => '',
+					'disporder' => '100'
+				),
 			),
 		),
 	);

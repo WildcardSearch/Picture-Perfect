@@ -7,7 +7,7 @@
  * module wrapper
  */
 
-class PicturePerfectModule extends ConfigurableModule010010
+class PicturePerfectModule extends InstallableModule010000
 {
 	/**
 	 * @var the path
@@ -38,6 +38,26 @@ class PicturePerfectModule extends ConfigurableModule010010
 	 * @var
 	 */
 	protected $createsSet = true;
+
+	/**
+	 * @var string
+	 */
+	protected $cacheKey = 'picture_perfect';
+
+	/**
+	 * @var string
+	 */
+	protected $cacheSubKey = 'addons';
+
+	/**
+	 * @var string
+	 */
+	protected $settingGroupName = 'pp_settings';
+
+	/**
+	 * @var string
+	 */
+	protected $installConstant = 'PP_IN_INSTALL';
 
 	/**
 	 * run the module parser routine

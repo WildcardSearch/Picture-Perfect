@@ -162,7 +162,7 @@ function ppFetchRemoteFiles($files)
 		if ($file['info']['http_code'] == 200) {
 			$file['content'] = curl_multi_getcontent($h);
 
-			$file['tmp_url'] = MYBB_ROOT . "images/picture_perfect/temp/temp_{$id}";
+			$file['tmp_url'] = MYBB_ROOT."images/picture_perfect/temp/temp_{$id}";
 			file_put_contents($file['tmp_url'], $file['content']);
 		} else {
 			$file['error'] = curl_error($h);
@@ -263,7 +263,7 @@ function ppResizeImage($source, $destination, $width, $height, $crop=false)
  * @param  int
  * @return string
  */
-function ppStorePostedImages($pid, $tid, $message)
+function ppStorePostedImages($pid, $tid, $fid, $message)
 {
 	global $db;
 
@@ -273,6 +273,7 @@ function ppStorePostedImages($pid, $tid, $message)
 			'setid' => 0,
 			'pid' => (int) $pid,
 			'tid' => (int) $tid,
+			'fid' => (int) $fid,
 			'url' => $db->escape_string($source),
 			'dateline' => TIME_NOW,
 		);
