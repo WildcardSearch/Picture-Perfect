@@ -25,7 +25,7 @@ $l['pp_inline_title'] = 'Inline Edits';
 /* install */
 
 $l['pp_installation'] = 'Picture Perfect Installation';
-$l['pp_finalizing_installation'] = 'Installation almost completed. Analyzing your forum\'s posted images. Please be patient. On larger forums, this might take a while...';
+$l['pp_finalizing_installation'] = 'Component installation completed.';
 $l['pp_finalize_installation'] = 'Finalize Installation';
 $l['pp_analyze_posted_images'] = 'Analyze Posted Images';
 $l['pp_analyze_posted_images_description'] = 'Collect and store information about the posted images on your forum.';

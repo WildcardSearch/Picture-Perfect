@@ -91,6 +91,7 @@ EOF;
 	$table->construct_header('Forum');
 	$table->construct_header('Description');
 	$table->construct_header('Image Count');
+	$table->construct_header('Control');
 
 	ppBuildForumList($table, $fid);
 
@@ -160,8 +161,9 @@ EOF;
 EOF;
 
 	$table = new Table;
-	$table->construct_header($lang->pp_thread, array('width' => '80%'));
+	$table->construct_header($lang->pp_thread, array('width' => '70%'));
 	$table->construct_header($lang->pp_image_count, array('width' => '15%'));
+	$table->construct_header('Controls', array('width' => '10%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
 
 	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
@@ -206,6 +208,11 @@ EOF;
 		while ($thread = $db->fetch_array($query)) {
 			$table->construct_cell($html->link($html->url(array('action' => 'view_thread', 'tid' => $thread['tid'])), $thread['subject']));
 			$table->construct_cell($thread['image_count']);
+
+			$popup = new PopupMenu("control_{$thread['tid']}", 'Options');
+			$popup->add_item('Scan', $html->url(array('action' => 'scan_center', 'mode' => 'inline', 'tid' => $thread['tid'])));
+			$table->construct_cell($popup->fetch());
+
 			$table->construct_cell($form->generate_check_box("pp_inline_ids[{$thread['tid']}]", '', '', array('class' => 'pp_check')));
 			$table->construct_row();
 
@@ -1309,6 +1316,109 @@ function pp_admin_edit_image_task_list()
 }
 
 /**
+ * scan images selectively
+ *
+ * @return void
+ */
+function pp_admin_scan_center()
+{
+	global $mybb, $db, $page, $lang, $html, $min, $modules;
+
+	$tid = (int) $mybb->input['tid'];
+	$fid = (int) $mybb->input['fid'];
+
+	if ($mybb->request_method == 'post' ||
+		$mybb->input['mode'] == 'inline') {
+		if ($tid) {
+			if ($mybb->input['mode'] != 'override') {
+				$query = $db->simple_select('pp_images', 'id', "tid='{$tid}'");
+
+				if ($db->num_rows($query)) {
+					flash_message('Existing images found for this thread!', 'error');
+					admin_redirect($html->url(array('action' => 'scan_center', 'mode' => 'confirm_overwrite', 'tid' => $tid, 'fid' => $fid)));
+				}
+			}
+
+			$message = "Scan Thread #{$mybb->input['tid']}";
+		} elseif ($fid) {
+			if ($mybb->input['mode'] != 'override') {
+				$query = $db->simple_select('pp_images', 'id', "fid='{$fid}'");
+
+				if ($db->num_rows($query)) {
+					flash_message('Existing images found for this forum!', 'error');
+					admin_redirect($html->url(array('action' => 'scan_center', 'mode' => 'confirm_overwrite', 'tid' => $tid, 'fid' => $fid)));
+				}
+			}
+
+			$message = "Scan Forum #{$mybb->input['fid']}";
+		} else {
+			if ($mybb->input['mode'] != 'override') {
+				$query = $db->simple_select('pp_images', 'id');
+
+				if ($db->num_rows($query)) {
+					flash_message('Existing images found for this site!', 'error');
+					admin_redirect($html->url(array('action' => 'scan_center', 'mode' => 'confirm_overwrite')));
+				}
+			}
+
+			$message = "Scan Entire Forum";
+		}
+
+		$newOnly = (isset($mybb->input['start_new_scan']));
+		$deleteFirst = (isset($mybb->input['start_delete_and_scan']));
+
+		ppInitiateImageScan($message, $mybb->input['fid'], $mybb->input['tid'], $newOnly, $deleteFirst);
+	}
+
+	if ($mybb->input['mode'] == 'confirm_overwrite') {
+		$page->add_breadcrumb_item('Confirm Image Overwrite');
+
+		$page->output_header("{$lang->pp} - Image Scan Center");
+		pp_output_tabs('pp_confirm_overwrite');
+
+		echo <<<EOF
+<div style="width: 60%; border-radius: 6px; border: 1px solid gray; background: pink; text-align: center; padding: 20px; margin: 20px auto;">
+	<span style="font-size: 1.4em">The thread or folder you have chosen to be scanned already has existing images. Scanning again may produce duplicate records unless you choose to only look for new images.</span>
+</div>
+EOF;
+
+		$form = new Form($html->url(array('action' => 'scan_center', 'mode' => 'override')), 'post');
+
+		echo($form->generate_hidden_field('tid', $tid));
+		echo($form->generate_hidden_field('fid', $fid));
+
+		$buttons[] = $form->generate_submit_button('Scan All Images (not recommended)', array('name' => 'start_full_scan'));
+		$buttons[] = $form->generate_submit_button('Scan Only New Images', array('name' => 'start_new_scan'));
+		$buttons[] = $form->generate_submit_button('Delete Existing Images And Start Over', array('name' => 'start_delete_and_scan'));
+		$form->output_submit_wrapper($buttons);
+		$form->end();
+
+		$page->output_footer();
+		exit;
+	}
+
+	$page->add_breadcrumb_item('Image Scan Center');
+
+	$page->output_header("{$lang->pp} - Image Scan Center");
+	pp_output_tabs('pp_scan_center');
+
+	$form = new Form($html->url(array('action' => 'scan_center')), 'post');
+
+	$formContainer = new FormContainer();
+
+	$formContainer->output_row('Thread ID', '', $form->generate_text_box('tid'));
+	$formContainer->output_row('Forum ID', '', $form->generate_text_box('fid'));
+
+	$formContainer->end();
+
+	$buttons[] = $form->generate_submit_button('Start Scan', array('name' => 'start_image_scan'));
+	$form->output_submit_wrapper($buttons);
+	$form->end();
+
+	$page->output_footer();
+}
+
+/**
  * merge new images into an existing task list
  *
  * @return void
@@ -1564,11 +1674,42 @@ function pp_admin_config_plugins_activate_commit() {
 		$lang->load('pp');
 	}
 
-	$query = $db->simple_select('posts', 'pid');
-	$count = (int) $db->num_rows($query);
+	ppInitiateImageScan($lang->pp_finalizing_installation);
+}
 
-	flash_message($lang->pp_finalizing_installation, 'success');
-	admin_redirect("index.php?module=config-pp&action=scan&count={$count}");
+function ppInitiateImageScan($message, $fid=0, $tid=0, $newOnly=false, $deleteFirst=false)
+{
+	global $db;
+
+	$fid = (int) $fid;
+	$tid = (int) $tid;
+
+	$where = $queryExtra = '';
+	if ($tid) {
+		$queryExtra = "&tid={$tid}";
+		$where = "tid='{$tid}'";
+	} elseif($fid) {
+		$queryExtra = "&fid={$fid}";
+		$where = "fid='{$fid}'";
+	}
+
+	if ($deleteFirst) {
+		$db->delete_query('pp_images', $where);
+		$db->delete_query('pp_image_threads', $where);
+	} elseif ($newOnly) {
+		$query = $db->simple_select('pp_images', 'pid', $where, array('order_by' => 'pid', 'order_dir' => 'DESC', 'limit' => 1));
+
+		$lastPid = (int) $db->fetch_field($query, 'pid');
+		$where .= " AND pid > {$lastPid}";
+
+		$queryExtra .= "&lastpid={$lastPid}";
+	}
+
+	$query = $db->simple_select('posts', 'COUNT(pid) as resultCount', $where);
+	$count = (int) $db->fetch_field($query, 'resultCount');
+
+	flash_message($message, 'success');
+	admin_redirect("index.php?module=config-pp&action=scan&count={$count}{$queryExtra}");
 }
 
 /**
@@ -1583,18 +1724,36 @@ function pp_admin_scan()
 		return false;
 	}
 
+	if (isset($mybb->input['do_not_analyze_posts'])) {
+		$warning = '<br /><br />Skipping the image scan means that you will not see any images in the ACP interface. You will need to scan images from your forum\'s post before you can begin to use the plugin image processing modules.';
+		flash_message($lang->pp_installation_finished.$warning, 'success');
+		admin_redirect('index.php?module=config-plugins');
+	}
+
 	if (!$lang->pp) {
 		$lang->load('pp');
 	}
 
 	$inProgress = (int) $mybb->input['in_progress'];
 	$start = (int) $mybb->input['start'];
+
 	$ppp = (int) $mybb->input['posts_per_page'];
 	if ($ppp == 0) {
 		$ppp = 10000;
 	}
+
 	$totalCount = (int) $mybb->input['count'];
 
+	if (!$totalCount) {
+		flash_message('No images to scan.', 'error');
+		admin_redirect('index.php?module=config-pp&action=scan_center');
+	}
+
+	$fid = (int) $mybb->input['fid'];
+	$tid = (int) $mybb->input['tid'];
+	$lastPid = (int) $mybb->input['lastpid'];
+	
+	
 	if ($mybb->request_method == 'post') {
 		$threadCache = $cache->read('pp_thread_cache');
 
@@ -1605,7 +1764,20 @@ function pp_admin_scan()
 
 		$done = false;
 
-		$query = $db->simple_select('posts', 'pid, tid, fid, message', '', array('limit' => $ppp, 'limit_start' => $start, 'order_by' => 'dateline', 'order_dir', 'ASC'));
+		$operator = $where = '';
+		if ($tid) {
+			$where = "tid='{$tid}'";
+			$operator = ' AND ';
+		} elseif ($fid) {
+			$where = "fid='{$fid}'";
+			$operator = ' AND ';
+		}
+
+		if ($lastPid) {
+			$where .= "{$operator}pid > {$lastPid}";
+		}
+
+		$query = $db->simple_select('posts', 'pid, tid, fid, message', $where, array('limit' => $ppp, 'limit_start' => $start, 'order_by' => 'dateline', 'order_dir', 'ASC'));
 
 		$count = $db->num_rows($query);
 		if ($count == 0 ||
@@ -1638,11 +1810,11 @@ function pp_admin_scan()
 
 			foreach ($threadCache as $key => $count) {
 				$keyPieces = explode('-', $key);
-				list($fid, $tid) = $keyPieces;
+				list($forumId, $threadId) = $keyPieces;
 				
 				$insert_arrays[] = array(
-					'tid' => (int) $tid,
-					'fid' => (int) $fid,
+					'tid' => (int) $threadId,
+					'fid' => (int) $forumId,
 					'image_count' => (int) $count,
 					'dateline' => TIME_NOW,
 				);
@@ -1654,8 +1826,18 @@ function pp_admin_scan()
 
 			$cache->update('pp_thread_cache', null);
 
-			flash_message($lang->pp_installation_finished, 'success');
-			admin_redirect('index.php?module=config-plugins');
+			$message = $lang->pp_installation_finished;
+			$redirect = 'index.php?module=config-plugins';
+			if ($tid) {
+				$message = 'Thread scanned successfully.';
+				$redirect = "index.php?module=config-pp&action=view_thread&tid={$tid}";
+			} elseif ($fid) {
+				$message = 'Forum scanned successfully.';
+				$redirect = 'index.php?module=config-pp';
+			}
+
+			flash_message($message, 'success');
+			admin_redirect($redirect);
 		}
 
 		$start += $ppp;
@@ -1678,26 +1860,26 @@ EOF;
 
 	$page->output_header("{$lang->pp} - {$lang->pp_installation}");
 
-	if ($inProgress) {
-		$message = $lang->sprintf($lang->pp_installation_progress, $start, $totalCount);
-		$info = <<<EOF
+	$message = $lang->sprintf($lang->pp_installation_progress, $start, $totalCount);
+	$info = <<<EOF
 <div style="width: 100%; height: 40px; background: #f2f2f2; text-align: center; font-weight: bold;">
-	<h1>{$message}</h1>
+<h1>{$message}</h1>
 <div>
 EOF;
-		echo($info);
-	}
+	echo($info);
 
 	$form = new Form('index.php?module=config-pp', 'post');
 
 	$form_container = new FormContainer($lang->pp_analyze_posted_images);
-	$form_container->output_row_header($lang->name);
-	$form_container->output_row_header($lang->pp_posts_per_page, array('width' => 50));
-	$form_container->output_row_header('&nbsp;');
+	$form_container->output_row_header('Task', array('width' => '60%'));
+	$form_container->output_row_header($lang->pp_posts_per_page, array('width' => '20%'));
+	$form_container->output_row_header('&nbsp;', array('width' => '5%'));
+	$form_container->output_row_header('&nbsp;', array('width' => '10%'));
 
 	$form_container->output_cell("<label>{$lang->pp_analyze_posted_images}</label><div class=\"description\">{$lang->pp_analyze_posted_images_description}</div>");
 	$form_container->output_cell($form->generate_numeric_field('posts_per_page', $ppp, array('style' => 'width: 150px;', 'min' => 0)));
-	$form_container->output_cell($form->generate_submit_button($lang->go, array('name' => 'analyze_posts', 'class' => 'button_yes', 'id' => 'analyze_submit')).$form->generate_hidden_field('start', $start).$form->generate_hidden_field('count', $totalCount).$form->generate_hidden_field('in_progress', 1).$form->generate_hidden_field('action', 'scan'));
+	$form_container->output_cell($form->generate_submit_button($lang->go, array('name' => 'analyze_posts', 'class' => 'button_yes', 'id' => 'analyze_submit')));
+	$form_container->output_cell($form->generate_submit_button('Skip for now...', array('name' => 'do_not_analyze_posts', 'class' => 'button_no', 'id' => 'skip_submit')).$form->generate_hidden_field('start', $start).$form->generate_hidden_field('count', $totalCount).$form->generate_hidden_field('in_progress', 1).$form->generate_hidden_field('action', 'scan').$form->generate_hidden_field('fid', $fid).$form->generate_hidden_field('tid', $tid).$form->generate_hidden_field('lastpid', $lastPid));
 	$form_container->construct_row();
 
 	$form_container->end();
@@ -1796,6 +1978,15 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 			'description' => 'configure image task details',
 		);
 		break;
+	case 'pp_confirm_overwrite':
+		$urlArray = array('action' => 'scan_center', 'mode' => 'confirm_overwrite');
+
+		$subTabs['pp_confirm_overwrite'] = array(
+			'title' => 'Confirm Image Overwrite',
+			'link' => $html->url($urlArray),
+			'description' => 'The thread or forum being scanned already has existing images. You are being asked to confirm whether to delete the existing images and rescan, or to only look for new images.',
+		);
+		break;
 	}
 
 	$subTabs['pp_sets'] = array(
@@ -1804,16 +1995,22 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 		'description' => $lang->pp_admin_sets_desc,
 	);
 
+	$subTabs['pp_image_tasks'] = array(
+		'title' => 'Image Tasks',
+		'link' => $html->url(array('action' => 'image_tasks')),
+		'description' => 'view and manage image tasks',
+	);
+
 	$subTabs['pp_image_task_lists'] = array(
 		'title' => 'Image Task Lists',
 		'link' => $html->url(array('action' => 'image_task_lists')),
 		'description' => 'view and manage image tasks',
 	);
 
-	$subTabs['pp_image_tasks'] = array(
-		'title' => 'Image Tasks',
-		'link' => $html->url(array('action' => 'image_tasks')),
-		'description' => 'view and manage image tasks',
+	$subTabs['pp_scan_center'] = array(
+		'title' => 'Scan Center',
+		'link' => $html->url(array('action' => 'scan_center')),
+		'description' => 'scan the forum for images',
 	);
 
 	$page->output_nav_tabs($subTabs, $current);
@@ -1829,7 +2026,7 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
  */
 function ppBuildForumList(&$table, $pid=0, $depth=1)
 {
-	global $mybb, $lang, $db, $sub_forums;
+	global $mybb, $lang, $db, $sub_forums, $html;
 	static $allForums;
 
 	// load the forum cache if necessary
@@ -1858,6 +2055,7 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 				$table->construct_cell("<div style=\"padding-left: ".(10*($depth-1))."px;\"><strong>{$forum['name']}</strong></div>");
 				$table->construct_cell("<span style=\"font-style: italic;\">{$forum['description']}</span>");
 				$table->construct_cell('');
+				$table->construct_cell('');
 				$table->construct_row();
 
 				// Does this category have any sub forums?
@@ -1881,6 +2079,10 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 				$table->construct_cell("<div style=\"{$forumNameStyle}padding-left: ".(10*($depth-1))."px;\">{$forumLink}</div>");
 				$table->construct_cell("<span style=\"font-style: italic;\">{$forum['description']}</span>");
 				$table->construct_cell("<span style=\"{$imageCountStyle}\">{$imageCount}</span>");
+
+				$popup = new PopupMenu("control_{$forum['fid']}", 'Options');
+				$popup->add_item('Scan', $html->url(array('action' => 'scan_center', 'mode' => 'inline', 'fid' => $forum['fid'])));
+				$table->construct_cell($popup->fetch());
 
 				$table->construct_row();
 
