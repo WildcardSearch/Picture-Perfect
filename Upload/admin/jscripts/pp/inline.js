@@ -32,7 +32,7 @@ var PP = (function(a, $) {
 		initialCount();
 		$('#pp_select_all').click(selectAll);
 		$('.pp_check').click(keepCount);
-		$('#pp_inline_clear').click(clearAll);
+		$('.pp_inline_clear').click(clearAll);
 		$('#pp_inline_submit').click(submitCheck);
 	}
 
@@ -116,7 +116,7 @@ var PP = (function(a, $) {
 	 * @return void
 	 */
 	function updateCheckCount() {
-		$('#pp_inline_submit').val(lang.go + ' (' + checkCount + ')');
+		$('input.pp_inline_submit').val(lang.go + ' (' + checkCount + ')');
 	}
 
 	/**

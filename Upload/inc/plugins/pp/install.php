@@ -138,6 +138,8 @@ function pp_install()
 	) as $folder) {
 		ppCreateFolder(MYBB_ROOT."images/{$folder}");
 	}
+
+	ppInstallTask();
 }
 
 /**
@@ -163,6 +165,8 @@ function pp_activate()
 
 	// change the permissions to on by default
 	change_admin_permission('config', 'pp');
+
+	ppEnableTask();
 }
 
 /**
@@ -174,6 +178,8 @@ function pp_deactivate()
 {
 	// remove the permissions
 	change_admin_permission('config', 'pp', -1);
+
+	ppDisableTask();
 }
 
 /**
@@ -184,7 +190,10 @@ function pp_deactivate()
 function pp_uninstall()
 {
 	PicturePerfectInstaller::getInstance()->uninstall();
+
 	PicturePerfectCache::getInstance()->clear();
+
+	ppRemoveTask();
 }
 
 /**
@@ -312,6 +321,90 @@ function ppIsWritable($rootFolder)
 		}
 	}
 	return true;
+}
+
+/**
+ * add the task
+ *
+ * @return void
+ */
+function ppInstallTask()
+{
+	global $db, $lang, $plugins, $cache;
+
+	$query = $db->simple_select('tasks', 'tid', "file='pp_image_tasks'", array('limit' => '1'));
+    if ($db->num_rows($query) == 0) {
+		require_once MYBB_ROOT.'/inc/functions_task.php';
+
+        $thisTask = array(
+            "title" => 'Picture Perfect Image Tasks',
+            "file" => 'pp_image_tasks',
+            "description" => 'processes image task lists and processes images according to user settings',
+            "minute" => '0,9,19,29,39,49,59',
+            "hour" => '*',
+            "day" => '*',
+            "weekday" => '*',
+            "month" => '*',
+            "nextrun" => TIME_NOW+3600,
+            "lastrun" => 0,
+            "enabled" => 0,
+            "logging" => 1,
+            "locked" => 0,
+        );
+
+        $tid = (int) $db->insert_query('tasks', $thisTask);
+        $nextrun = fetch_next_run($thisTask);
+        $db->update_query('tasks', "nextrun='{$nextrun}', tid='{$tid}'");
+
+        $plugins->run_hooks('admin_tools_tasks_add_commit');
+
+		$cache->update_tasks();
+    }
+}
+
+/**
+ * remove the task
+ *
+ * @return void
+ */
+function ppRemoveTask()
+{
+	global $db, $cache;
+
+	// remove the task entry
+	$db->delete_query('tasks', "file='pp_image_tasks'");
+
+	$cache->update_tasks();
+}
+
+/**
+ * enable the task
+ *
+ * @return void
+ */
+function ppEnableTask()
+{
+	global $db, $cache;
+
+	// disable the task
+	$db->update_query('tasks', array('enabled' => 1), "file = 'pp_image_tasks'");
+
+	$cache->update_tasks();
+}
+
+/**
+ * disable the task
+ *
+ * @return void
+ */
+function ppDisableTask()
+{
+	global $db, $cache;
+
+	// disable the task
+	$db->update_query('tasks', array('enabled' => 0), "file = 'pp_image_tasks'");
+
+	$cache->update_tasks();
 }
 
 ?>

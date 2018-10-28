@@ -151,8 +151,8 @@ EOF;
 		<select name="inline_action">
 			<option value="delete">Delete</option>
 		</select>
-		<input id="pp_inline_submit" type="submit" class="button" name="pp_inline_submit" value="{$lang->go} (0)"/>
-		<input id="pp_inline_clear" type="button" class="button" name="pp_inline_clear" value="{$lang->clear}"/>
+		<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} (0)"/>
+		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
 		<input type="hidden" name="page" value="{$mybb->input['page']}" />
 	</span>
 </div>
@@ -317,8 +317,32 @@ EOF;
 		<strong>{$lang->pp_inline_title}:</strong>&nbsp;
 		<select name="addon">{$options}
 		</select>
-		<input id="pp_inline_submit" type="submit" class="button" name="pp_inline_submit" value="{$lang->go} ({$selectedCount})"/>
-		<input id="pp_inline_clear" type="button" class="button" name="pp_inline_clear" value="{$lang->clear}"/>
+		<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} ({$selectedCount})"/>
+		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
+	</span>
+</div>
+<br />
+EOF;
+	}
+
+	$taskOptions = '';
+	$query = $db->simple_select('pp_image_task_lists', '*', 'active=1');
+	if ($db->num_rows($query)) {
+		while ($taskList = $db->fetch_array($query)) {
+			$taskOptions .= <<<EOF
+
+			<option value="{$taskList['id']}">{$taskList['title']}</option>
+EOF;
+		}
+
+		echo <<<EOF
+<div>
+	<span>
+		<strong>Add to task list:</strong>&nbsp;
+		<select name="tasklist">{$taskOptions}
+		</select>
+		<input type="submit" class="pp_inline_submit button" name="pp_task_submit" value="{$lang->go} ({$selectedCount})"/>
+		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
 	</span>
 </div>
 <br />
@@ -511,8 +535,8 @@ EOF;
 		<select name="inline_action">
 			<option value="delete">Delete</option>
 		</select>
-		<input id="pp_inline_submit" type="submit" class="button" name="pp_inline_submit" value="{$lang->go} (0)"/>
-		<input id="pp_inline_clear" type="button" class="button" name="pp_inline_clear" value="{$lang->clear}"/>
+		<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} (0)"/>
+		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
 	</span>
 </div>
 <br />
@@ -708,8 +732,8 @@ EOF;
 		<select name="inline_action">
 			<option value="delete">Delete</option>
 		</select>
-		<input id="pp_inline_submit" type="submit" class="button" name="pp_inline_submit" value="{$lang->go} (0)"/>
-		<input id="pp_inline_clear" type="button" class="button" name="pp_inline_clear" value="{$lang->clear}"/>
+		<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} (0)"/>
+		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
 	</span>
 </div>
 <br />
@@ -789,6 +813,555 @@ EOF;
 }
 
 /**
+ * view and manage image tasks
+ *
+ * @return void
+ */
+function pp_admin_image_tasks()
+{
+	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
+
+	$page->add_breadcrumb_item('Image Tasks');
+
+	// set up the page header
+	$page->extra_header .= <<<EOF
+	<script type="text/javascript" src="jscripts/pp/inline{$min}.js"></script>
+	<script type="text/javascript">
+	<!--
+	PP.inline.setup({
+		go: '{$lang->go}',
+		noSelection: '{$lang->pp_inline_selection_error}',
+	});
+	// -->
+	</script>
+
+	<style>
+		.pp_select_all {
+			float: right;
+		}
+	</style>
+
+EOF;
+
+	$page->output_header("{$lang->pp} - Image Tasks");
+	pp_output_tabs('pp_image_tasks');
+
+	// get a total count on the items
+	$query = $db->simple_select('pp_image_tasks', 'COUNT(id) AS resultCount', "lid=0");
+	$resultCount = $db->fetch_field($query, 'resultCount');
+
+	$perPage = 12;
+	$totalPages = ceil($resultCount / $perPage);
+
+	$form = new Form($html->url(array('action' => 'view_tasks', 'mode' => 'inline')), 'post');
+
+	echo <<<EOF
+<div>
+	<span>
+		<strong>{$lang->pp_inline_title}:</strong>&nbsp;
+		<select name="inline_action">
+			<option value="delete">Delete</option>
+		</select>
+		<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} (0)"/>
+		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
+	</span>
+</div>
+<br />
+<a href="index.php?module=config-pp&amp;action=" title="add new image task"></a>
+<br />
+EOF;
+
+	$newTaskUrl = $html->url(array('action' => 'edit_image_task'));
+	$newTaskLink = $html->link($newTaskUrl, 'Add a new image task', array('style' => 'font-weight: bold;', 'title' => 'Add a new image task', 'icon' => "styles/{$cp_style}/images/asb/add.png"), array('alt' => '+', 'style' => 'margin-bottom: -3px;', 'title' => 'Add a new image task'));
+	echo($newTaskLink.'<br /><br />');
+
+	$table = new Table;
+	$table->construct_header('Title', array('width' => '35%'));
+	$table->construct_header('Description', array('width' => '35%'));
+	$table->construct_header('Module', array('width' => '15%'));
+	$table->construct_header('Order', array('width' => '10%'));
+	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
+
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
+	if (!isset($mybb->input['page']) ||
+		$mybb->input['page'] == '' ||
+		(int) $mybb->input['page'] < 1) {
+		// no page, page = 1
+		$mybb->input['page'] = 1;
+	} else if ($mybb->input['page'] > $totalPages) {
+		// past last page? page = last page
+		$mybb->input['page'] = $totalPages;
+	} else {
+		// in range? page = # in link
+		$mybb->input['page'] = (int) $mybb->input['page'];
+	}
+
+	// more than one page?
+	$start = ($mybb->input['page'] - 1) * $perPage;
+	if ($resultCount > $perPage) {
+		// save the pagination for below and show it here as well
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_tasks', 'id' => $id)));
+		echo($pagination.'<br />');
+	}
+
+	$query = $db->simple_select('pp_image_tasks', '*', "lid=0", array('limit_start' => $start, 'limit' => $perPage));
+	$count = 0;
+	$tasks = array();
+	while ($task = $db->fetch_array($query)) {
+		$tasks[$task['id']] = $task;
+	}
+
+	foreach ($tasks as $id => $task) {
+		$addonName = $modules[$task['addon']]->get('title');
+
+		$table->construct_cell($task['title']);
+		$table->construct_cell($task['description']);
+		$table->construct_cell($addonName);
+		$table->construct_cell($task['task_order']);
+		$table->construct_cell($form->generate_check_box("selected_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')));
+
+		$table->construct_row();
+	}
+
+	if (empty($tasks)) {
+		$table->construct_cell('nothing yet', array('colspan' => 5));
+		$table->construct_row();
+	}
+
+	$checkbox = $form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all'));
+
+	$table->output("View Tasks &mdash; {$task['title']}".$checkbox);
+	$form->end();
+	echo('<br />');
+
+	// more than one page?
+	if ($resultCount > $perPage) {
+		// if so show pagination on the right this time just to be weird
+		echo($pagination);
+	}
+
+	$page->output_footer();
+}
+
+/**
+ * edit image task details
+ *
+ * @return void
+ */
+function pp_admin_edit_image_task()
+{
+	global $mybb, $db, $page, $lang, $html, $min, $modules;
+
+	$data = array();
+	$id = (int) $mybb->input['id'];
+	$task = new PicturePerfectImageTask($id);
+	if ($task->isValid()) {
+		$data = $task->get('data');
+	}
+
+	if ($mybb->request_method == 'post') {
+		$module = $modules[$mybb->input['addon']];
+		if ($mybb->input['mode'] == 'configure') {
+			$page->add_breadcrumb_item('Configure Image Task');
+
+			$page->output_header("{$lang->pp} - Configure Image Task");
+			pp_output_tabs('pp_configure_image_task');
+
+			$form = new Form($html->url(array('action' => 'edit_image_task')), 'post');
+			$formContainer = new FormContainer($module->get('title').' Settings');
+
+			$module->outputSettings($formContainer);
+
+			echo($form->generate_hidden_field('id', $id).$form->generate_hidden_field('addon', $mybb->input['addon']).$form->generate_hidden_field('title', $mybb->input['title']).$form->generate_hidden_field('description', $mybb->input['description']).$form->generate_hidden_field('task_order', $mybb->input['task_order']));
+
+			$formContainer->end();
+			$buttons[] = $form->generate_submit_button('Save Task', array('name' => 'process_submit'));
+			$form->output_submit_wrapper($buttons);
+			$form->end();
+
+			$page->output_footer();
+		}
+
+		$task->set($mybb->input);
+
+		$settings = array();
+		foreach ($module->get('settings') as $name => $setting) {
+			$settings[$name] = $setting['value'];
+			if (isset($mybb->input[$name])) {
+				$settings[$name] = $mybb->input[$name];
+			}
+		}
+
+		$task->set('settings', $settings);
+
+		if (!$task->save()) {
+			flash_message('fail', 'error');
+			admin_redirect($html->url(array('action' => 'edit_image_task', 'mode' => 'configure')));
+		}
+
+		flash_message('success', 'success');
+		admin_redirect($html->url(array('action' => 'image_tasks', 'id' => $id)));
+	}
+
+	if (is_array($modules) &&
+		!empty($modules)) {
+		$options = array();
+		foreach ($modules as $key => $module) {
+			$options[$key] = $module->get('actionPhrase');
+		}
+	}
+
+	$page->add_breadcrumb_item('Edit Image Task');
+
+	$page->output_header("{$lang->pp} - Edit Image Task");
+	pp_output_tabs('pp_edit_image_task');
+
+	$form = new Form($html->url(array('action' => 'edit_image_task', 'mode' => 'configure')), 'post');
+
+	$formContainer = new FormContainer();
+
+	$formContainer->output_row('Title', '', $form->generate_text_box('title', $data['title']));
+	$formContainer->output_row('Description', '', $form->generate_text_box('description', $data['description']));
+	$formContainer->output_row('Module', '', $form->generate_select_box('addon', $options));
+	$formContainer->output_row('Order', '', $form->generate_text_box('task_order', $data['task_order']).$form->generate_hidden_field('id', $id).$form->generate_hidden_field('pid', 0));
+
+	$formContainer->end();
+	$buttons[] = $form->generate_submit_button('Configure Module and Save', array('name' => 'edit_image_task_submit'));
+	$form->output_submit_wrapper($buttons);
+	$form->end();
+
+	$page->output_footer();
+}
+
+/**
+ * view and manage image task lists
+ *
+ * @return void
+ */
+function pp_admin_image_task_lists()
+{
+	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
+
+	$page->add_breadcrumb_item('Image Task Lists');
+
+	// set up the page header
+	$page->extra_header .= <<<EOF
+	<script type="text/javascript" src="jscripts/pp/inline{$min}.js"></script>
+	<script type="text/javascript">
+	<!--
+	PP.inline.setup({
+		go: '{$lang->go}',
+		noSelection: '{$lang->pp_inline_selection_error}',
+	});
+	// -->
+	</script>
+
+	<style>
+		.pp_select_all {
+			float: right;
+		}
+	</style>
+
+EOF;
+
+	$page->output_header("{$lang->pp} - Image Task Lists");
+	pp_output_tabs('pp_image_task_lists');
+
+	// get a total count on the items
+	$query = $db->simple_select('pp_image_task_lists', 'COUNT(id) AS resultCount');
+	$resultCount = $db->fetch_field($query, 'resultCount');
+
+	$perPage = 12;
+	$totalPages = ceil($resultCount / $perPage);
+
+	$form = new Form($html->url(array('action' => 'view_task_lists', 'mode' => 'inline')), 'post');
+
+	echo <<<EOF
+<div>
+	<span>
+		<strong>{$lang->pp_inline_title}:</strong>&nbsp;
+		<select name="inline_action">
+			<option value="delete">Delete</option>
+		</select>
+		<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} (0)"/>
+		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
+	</span>
+</div>
+<br />
+<a href="index.php?module=config-pp&amp;action=" title="add new image task"></a>
+<br />
+EOF;
+
+	$newTaskUrl = $html->url(array('action' => 'edit_image_task_list'));
+	$newTaskLink = $html->link($newTaskUrl, 'Add a new image task list', array('style' => 'font-weight: bold;', 'title' => 'Add a new image task list', 'icon' => "styles/{$cp_style}/images/asb/add.png"), array('alt' => '+', 'style' => 'margin-bottom: -3px;', 'title' => 'Add a new image task list'));
+	echo($newTaskLink.'<br /><br />');
+
+	$table = new Table;
+	$table->construct_header('Title', array('width' => '25%'));
+	$table->construct_header('Description', array('width' => '25%'));
+	$table->construct_header('Images', array('width' => '5%'));
+	$table->construct_header('Image Set', array('width' => '15%'));
+	$table->construct_header('Location', array('width' => '15%'));
+	$table->construct_header('Status', array('width' => '10%'));
+	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
+
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
+	if (!isset($mybb->input['page']) ||
+		$mybb->input['page'] == '' ||
+		(int) $mybb->input['page'] < 1) {
+		// no page, page = 1
+		$mybb->input['page'] = 1;
+	} else if ($mybb->input['page'] > $totalPages) {
+		// past last page? page = last page
+		$mybb->input['page'] = $totalPages;
+	} else {
+		// in range? page = # in link
+		$mybb->input['page'] = (int) $mybb->input['page'];
+	}
+
+	// more than one page?
+	$start = ($mybb->input['page'] - 1) * $perPage;
+	if ($resultCount > $perPage) {
+		// save the pagination for below and show it here as well
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_task_lists', 'id' => $id)));
+		echo($pagination.'<br />');
+	}
+
+	$query = $db->simple_select('pp_image_sets', '*');
+	$imageSets = array();
+	while ($imageSet = $db->fetch_array($query)) {
+		$imageSets[$imageSet['id']] = $imageSet['title'];
+	}
+
+	$query = $db->simple_select('pp_image_task_lists', '*', '', array('limit_start' => $start, 'limit' => $perPage));
+	$count = 0;
+	$taskLists = array();
+	while ($taskList = $db->fetch_array($query)) {
+		$taskLists[$taskList['id']] = $taskList;
+	}
+
+	foreach ($taskLists as $id => $taskList) {
+		if (!empty($taskList['images'])) {
+			$imageArray = explode(',', $taskList['images']);
+			$imageCount = count($imageArray);
+		} else {
+			$taskList['images'] = array();
+			$imageCount = 0;
+		}
+
+		$imageSetTitle = $imageSets[$taskList['setid']];
+		$taskListStatus = $taskList['active'] ? 'Active' : 'Inactive';
+
+		$editUrl = $html->url(array('action' => 'edit_image_task_list', 'id' => $id));
+		$editLink = $html->link($editUrl, $taskList['title']);
+
+		$table->construct_cell($editLink);
+		$table->construct_cell($taskList['description']);
+		$table->construct_cell($imageCount);
+		$table->construct_cell($imageSetTitle);
+		$table->construct_cell($taskList['destination']);
+		$table->construct_cell($taskListStatus);
+		$table->construct_cell($form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all')));
+
+		$table->construct_row();
+	}
+
+	if (empty($taskLists)) {
+		$table->construct_cell('nothing yet', array('colspan' => 7));
+		$table->construct_row();
+	}
+
+	$table->output("View Task Lists");
+	$form->end();
+	echo('<br />');
+
+	// more than one page?
+	if ($resultCount > $perPage) {
+		// if so show pagination on the right this time just to be weird
+		echo($pagination);
+	}
+
+	$page->output_footer();
+}
+
+/**
+ * edit image task list details
+ *
+ * @return void
+ */
+function pp_admin_edit_image_task_list()
+{
+	global $mybb, $db, $page, $lang, $html, $min, $modules;
+
+	$data = array();
+	$id = (int) $mybb->input['id'];
+	$taskList = new PicturePerfectImageTaskList($id);
+	if ($taskList->isValid()) {
+		$data = $taskList->get('data');
+
+		$data['active'] = $data['active'] ? '1' : '0';
+	} else {
+		$data['active'] = '0';
+	}
+
+	if ($mybb->request_method == 'post') {
+		if ($mybb->input['setid'] == 'new') {
+			$imageSet = new PicturePerfectImageSet(array(
+				'title' => "{$mybb->input['title']} (set)",
+				'description' => "image set for {$mybb->input['title']}",
+			));
+
+			$mybb->input['setid'] = $imageSet->save();
+			if (!$mybb->input['setid']) {
+				flash_message('could not save image set', 'error');
+				admin_redirect($html->url(array('action' => 'image_task_lists')));
+			}
+		} else {
+			$imageSet = new PicturePerfectImageSet($mybb->input['setid']);
+
+			if (!$imageSet->isValid()) {
+				flash_message('Invalid image set', 'error');
+				admin_redirect($html->url(array('action' => 'image_task_lists')));
+			}
+		}
+
+		if (empty($mybb->input['tasks'])) {
+			flash_message('No tasks selected', 'error');
+			admin_redirect($html->url(array('action' => 'image_task_lists')));
+		}
+
+		$mybb->input['tasks'] = implode(',', $mybb->input['tasks']);
+
+		$taskList->set($mybb->input);
+
+		if (!$id) {
+			$newTasks = explode(',', $mybb->input['tasks']);
+			$id = $taskList->save();
+
+			foreach ((array) $newTasks as $taskId) {
+				$thisTask = new PicturePerfectImageTask($taskId);
+				$thisTask->set('id', 0);
+				$thisTask->set('lid', $id);
+				$thisTask->set('pid', $taskId);
+				$thisTask->save();
+			}
+		} else {
+			$taskList->save();
+		}
+
+		if (!$id) {
+			flash_message('fail', 'error');
+			admin_redirect($html->url(array('action' => 'edit_image_task_list')));
+		}
+
+		flash_message('success', 'success');
+		admin_redirect($html->url(array('action' => 'edit_image_task_list', 'id' => $id)));
+	}
+
+	$selected = array();
+	if ($id) {
+		$query = $db->simple_select('pp_image_tasks', '*', "lid='{$id}' AND pid !=0");
+		if ($db->num_rows($query)) {
+			while ($task = $db->fetch_array($query)) {
+				$selected[] = $task['pid'];
+			}
+		}
+	}
+
+	$options = array();
+	$query = $db->simple_select('pp_image_tasks', '*', "lid=0 AND pid=0");
+	if ($db->num_rows($query)) {
+		while ($task = $db->fetch_array($query)) {
+			$options[$task['id']] = $task['title'];
+		}
+	}
+
+	$sets = array('new' => 'new set');
+	$query = $db->simple_select('pp_image_sets', '*');
+	if ($db->num_rows($query)) {
+		while ($set = $db->fetch_array($query)) {
+			$sets[$set['id']] = $set['title'];
+		}
+	}
+
+	$page->add_breadcrumb_item('Edit Image Task List');
+
+	$page->output_header("{$lang->pp} - Edit Image Task List");
+	pp_output_tabs('pp_edit_image_task_list');
+
+	$form = new Form($html->url(array('action' => 'edit_image_task_list')), 'post');
+
+	$formContainer = new FormContainer();
+
+	$formContainer->output_row('Title', '', $form->generate_text_box('title', $data['title']));
+	$formContainer->output_row('Description', '', $form->generate_text_box('description', $data['description']));
+	$formContainer->output_row('Task(s)', '', $form->generate_select_box('tasks[]', $options, $selected, array('multiple' => true)));
+	$formContainer->output_row('Image Set', '', $form->generate_select_box('setid', $sets, $data['setid']));
+	$formContainer->output_row('Destination Path', '', $form->generate_text_box('destination', $data['destination']).$form->generate_hidden_field('id', $id));
+	$formContainer->output_row('Active?', '', $form->generate_yes_no_radio('active', $data['active']));
+
+	$formContainer->end();
+	$buttons[] = $form->generate_submit_button('Save Image Task List', array('name' => 'edit_image_task_list_submit'));
+	$form->output_submit_wrapper($buttons);
+	$form->end();
+
+	$page->output_footer();
+}
+
+/**
+ * merge new images into an existing task list
+ *
+ * @return void
+ */
+function ppAddImagesToTaskList()
+{
+	global $mybb, $db, $page, $lang, $html, $min;
+
+	$selected = $mybb->input['selected_ids'];
+	$selectedCount = count($selected);
+
+	$tid = (int) $mybb->input['tid'];
+	$redirectUrl = $html->url(array('action' => 'view_thread', 'tid' => $tid));
+
+	if (!is_array($selected) ||
+		empty($selected)) {
+		flash_message('no images', 'error');
+		admin_redirect($redirectUrl);
+	}
+
+	if (!$mybb->input['tasklist']) {
+		flash_message('bad task list', 'error');
+		admin_redirect($redirectUrl);
+	}
+
+	$taskList = new PicturePerfectImageTaskList($mybb->input['tasklist']);
+
+	if (!$taskList->isValid()) {
+		flash_message('invalid image task list', 'error');
+		admin_redirect($redirectUrl);
+	}
+
+	$currentImages = $taskList->get('images');
+	if (empty($currentImages)) {
+		$currentArray = array();
+	} else {
+		$currentArray = explode(',', $currentImages);
+	}
+
+	$mergedArray = array_merge($currentArray, array_keys($selected));
+	$mergedImages = implode(',', $mergedArray);
+	$taskList->set('images', $mergedImages);
+
+	if (!$taskList->save()) {
+		flash_message('could not save task list', 'error');
+		admin_redirect($redirectUrl);
+	}
+
+	flash_message('saved task list okay', 'success');
+	admin_redirect($redirectUrl);
+}
+
+/**
  * perform image tasks
  *
  * @return void
@@ -796,6 +1369,10 @@ EOF;
 function pp_admin_process_images()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
+
+	if (isset($mybb->input['pp_task_submit'])) {
+		ppAddImagesToTaskList();
+	}
 
 	$selected = $mybb->input['selected_ids'];
 	$selectedCount = count($selected);
@@ -1192,12 +1769,51 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 			'description' => $lang->pp_admin_edit_set_desc,
 		);
 		break;
+	case 'pp_edit_image_task':
+		$urlArray = array('action' => 'edit_image_task');
+
+		$subTabs['pp_edit_image_task'] = array(
+			'title' => 'Edit Image Task',
+			'link' => $html->url($urlArray),
+			'description' => 'edit image task details',
+		);
+		break;
+	case 'pp_edit_image_task_list':
+		$urlArray = array('action' => 'edit_image_task_list');
+
+		$subTabs['pp_edit_image_task_list'] = array(
+			'title' => 'Edit Image Task List',
+			'link' => $html->url($urlArray),
+			'description' => 'edit image task list details',
+		);
+		break;
+	case 'pp_configure_image_task':
+		$urlArray = array('action' => 'edit_image_task', 'mode' => 'configure');
+
+		$subTabs['pp_configure_image_task'] = array(
+			'title' => 'Configure Image Task',
+			'link' => $html->url($urlArray),
+			'description' => 'configure image task details',
+		);
+		break;
 	}
 
 	$subTabs['pp_sets'] = array(
 		'title' => $lang->pp_admin_sets,
 		'link' => $html->url(array('action' => 'sets')),
 		'description' => $lang->pp_admin_sets_desc,
+	);
+
+	$subTabs['pp_image_task_lists'] = array(
+		'title' => 'Image Task Lists',
+		'link' => $html->url(array('action' => 'image_task_lists')),
+		'description' => 'view and manage image tasks',
+	);
+
+	$subTabs['pp_image_tasks'] = array(
+		'title' => 'Image Tasks',
+		'link' => $html->url(array('action' => 'image_tasks')),
+		'description' => 'view and manage image tasks',
 	);
 
 	$page->output_nav_tabs($subTabs, $current);
