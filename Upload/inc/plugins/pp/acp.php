@@ -588,13 +588,19 @@ EOF;
 			$query = $db->simple_select('pp_images', 'COUNT(id) as image_count', "setid={$id}");
 			$imageCount = $db->fetch_field($query, 'image_count');
 
+			$editUrl = $html->url(array('action' => 'edit_set', 'id' => $id, 'my_post_key' => $mybb->post_code));
+
 			$deleteUrl = $html->url(array('action' => 'sets', 'mode' => 'delete', 'id' => $id, 'my_post_key' => $mybb->post_code));
-			$deleteLink = $html->link($deleteUrl, $lang->pp_delete);
 
 			$table->construct_cell($html->link($html->url(array('action' => 'view_set', 'id' => $id)), $imageSet['title']));
 			$table->construct_cell($imageSet['description']);
 			$table->construct_cell($imageCount);
-			$table->construct_cell($deleteLink);
+
+			$popup = new PopupMenu("control_{$id}", 'Options');
+			$popup->add_item('Edit', $editUrl);
+			$popup->add_item($lang->pp_delete, $deleteUrl);
+			$table->construct_cell($popup->fetch());
+
 			$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('class' => 'pp_check')));
 			$table->construct_row();
 		}
