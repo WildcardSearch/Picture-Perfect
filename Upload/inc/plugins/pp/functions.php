@@ -407,4 +407,60 @@ function ppCleanPath($path, $preOnly=false)
 	return $path;
 }
 
+/**
+ * remove protocol if given and trim if query if applicable
+ *
+ * @param  string
+ * @return string clean path
+ */
+function ppCleanDomain($domain='')
+{
+	if (!$domain) {
+		return '';
+	}
+
+	$hostname = str_replace(array('http://', 'https://'), '', $domain);
+
+	if (!$hostname) {
+		return '';
+	}
+
+	$hostname_array = explode('/', $hostname);
+
+	if (count($hostname_array) == 0) {
+		return '';
+	}
+
+	$hostname = $hostname_array[0];
+	if (!$hostname) {
+		return '';
+	}
+
+	return $hostname;
+}
+
+/**
+ * trim domain string and check to see that it exists
+ *
+ * @param  string
+ * @return string clean path
+ */
+function ppValidateDomain($domain)
+{
+	$domain = ppCleanDomain($domain);
+
+	if (!$domain) {
+		return false;
+	}
+
+	$resolved_ip = gethostbyname($hostname);
+
+	// gethostbyname returns the given string on error
+	if ($resolved_ip == $hostname) {
+		return false;
+	}
+
+	return true;
+}
+
 ?>
