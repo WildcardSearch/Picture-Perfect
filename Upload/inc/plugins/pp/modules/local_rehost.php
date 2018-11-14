@@ -121,6 +121,8 @@ function pp_local_rehost_process_images($images, $settings)
 
 		if ($ext == 'jpeg') {
 			$ext = 'jpg';
+		} elseif (!$ext) {
+			$ext = 'png';
 		}
 
 		$filename = "{$path}/{$baseName}.{$ext}";
