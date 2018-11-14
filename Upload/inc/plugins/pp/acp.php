@@ -77,7 +77,7 @@ function pp_admin_main()
 		$forum = get_forum($fid);
 	}
 
-	$page->add_breadcrumb_item($lang->pp_admin_main);
+	$page->add_breadcrumb_item($lang->pp);
 
 	// set up the page header
 	$page->extra_header .= <<<EOF
@@ -118,7 +118,10 @@ function pp_admin_view_threads()
 		$forum = get_forum($fid);
 	}
 
-	$page->add_breadcrumb_item($lang->pp_admin_main);
+	$forumName = htmlspecialchars_uni($forum['name']);
+
+	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item("View Image Threads in {$forumName}");
 
 	// set up the page header
 	$page->extra_header .= <<<EOF
@@ -254,12 +257,18 @@ function pp_admin_view_thread()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
 
-	$page->add_breadcrumb_item($lang->pp_admin_view_thread);
-
 	$selected = $mybb->input['selected_ids'];
 	$tid = (int) $mybb->input['tid'];
 	$titleQuery = $db->simple_select('threads', 'subject', "tid={$tid}");
 	$threadTitle = $db->fetch_field($titleQuery, 'subject');
+
+	$shortTitle = $threadTitle;
+	if (my_strlen($shortTitle) > 20) {
+		$shortTitle = my_substr($threadTitle, 17).'...';
+	}
+
+	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item("{$lang->pp_view_thread} #{$tid} ({$shortTitle})");
 
 	// set up the page header
 	$page->extra_header .= <<<EOF
@@ -637,17 +646,18 @@ function pp_admin_edit_set()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
 
-	$page->add_breadcrumb_item($lang->pp_admin_edit_set);
-
-	$page->output_header("{$lang->pp} - {$lang->pp_admin_edit_set}");
-	pp_output_tabs('pp_edit_set');
-
 	$data = array();
 	$id = (int) $mybb->input['id'];
 	$imageSet = new PicturePerfectImageSet($id);
 	if ($imageSet->isValid()) {
 		$data = $imageSet->get('data');
 	}
+
+	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item("{$lang->pp_admin_edit_set} #{$id} ({$imageSet->get('title')})");
+
+	$page->output_header("{$lang->pp} - {$lang->pp_admin_edit_set}");
+	pp_output_tabs('pp_edit_set');
 
 	if ($mybb->request_method == 'post') {
 		$imageSet->set($mybb->input);
@@ -684,8 +694,6 @@ function pp_admin_edit_set()
 function pp_admin_view_set()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
-
-	$page->add_breadcrumb_item($lang->pp_admin_view_set);
 
 	// set up the page header
 	$page->extra_header .= <<<EOF
@@ -729,11 +737,14 @@ function pp_admin_view_set()
 
 EOF;
 
-	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_set}");
-	pp_output_tabs('pp_view_set');
-
 	$id = (int) $mybb->input['id'];
 	$imageSet = new PicturePerfectImageSet($id);
+
+	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item("{$lang->pp_admin_view_set} #{$id} ({$imageSet->get('title')})");
+
+	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_set}");
+	pp_output_tabs('pp_view_set');
 
 	// get a total count on the items
 	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "setid={$id}");
@@ -1030,7 +1041,8 @@ function pp_admin_edit_image_task()
 		}
 	}
 
-	$page->add_breadcrumb_item('Edit Image Task');
+	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item("Edit Image Task #{$id} ({$task->get('title')})");
 
 	$page->output_header("{$lang->pp} - Edit Image Task");
 	pp_output_tabs('pp_edit_image_task');
@@ -1303,7 +1315,8 @@ function pp_admin_edit_image_task_list()
 		}
 	}
 
-	$page->add_breadcrumb_item('Edit Image Task List');
+	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item("Edit Image Task List #{$id} ({$taskList->get('title')})");
 
 	$page->output_header("{$lang->pp} - Edit Image Task List");
 	pp_output_tabs('pp_edit_image_task_list');
