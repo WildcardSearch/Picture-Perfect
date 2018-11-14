@@ -66,7 +66,7 @@ function pp_local_rehost_process_images($images, $settings)
 	// set up redirect
 	$tid = $images[key($images)]['tid'];
 	$redirectInfo = array(
-		'action' => 'view_set',
+		'action' => 'view_thread',
 		'tid' => $tid,
 	);
 
