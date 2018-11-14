@@ -25,9 +25,15 @@ function pp_local_rehost_info()
 		'settings' => array(
 			'path' => array(
 				'title' => 'Path',
-				'description' => 'URL relative to the forum root where the rehosted images should be stored',
+				'description' => 'location relative to the forum root where the rehosted images should be stored (eg. images or myimages/rehost)',
 				'optionscode' => 'text',
 				'value' => 'images/picture_perfect/rehost',
+			),
+			'domain' => array(
+				'title' => 'Domain',
+				'description' => 'leave this setting blank to use the board URL or enter a new domain here (useful for rehosting images to a subdomain) eg. http://images.myforum.com',
+				'optionscode' => 'text',
+				'value' => '',
 			),
 			'format' => array(
 				'title' => 'Image File Format',
@@ -65,6 +71,17 @@ function pp_local_rehost_process_images($images, $settings)
 	);
 
 	// build path
+	$domain = $settings['domain'];
+	if (!$domain) {
+		$domain = $mybb->settings['bburl'];
+	}
+
+	$domain = ppCleanPath($domain);
+	if ($domain != $mybb->settings['bburl'] &&
+		!ppValidateDomain($domain)) {
+		$domain = $mybb->settings['bburl'];
+	}
+
 	$basePath = ppCleanPath($settings['path']);
 	$path = MYBB_ROOT.$basePath;
 
@@ -139,7 +156,7 @@ function pp_local_rehost_process_images($images, $settings)
 		@imagedestroy($image['image']);
 
 		// now swap the image URL in the post
-		$url = "{$mybb->settings['bburl']}/{$basePath}/{$baseName}.{$ext}";
+		$url = "{$domain}/{$basePath}/{$baseName}.{$ext}";
 		if (!ppReplacePostImage($image['pid'], $image['url'], $url)) {
 			$fail++;
 		} else {
