@@ -161,7 +161,8 @@ EOF;
 EOF;
 
 	$table = new Table;
-	$table->construct_header($lang->pp_thread, array('width' => '70%'));
+	$table->construct_header($lang->pp_thread, array('width' => '50%'));
+	$table->construct_header('Thread Link', array('width' => '20%'));
 	$table->construct_header($lang->pp_image_count, array('width' => '15%'));
 	$table->construct_header('Controls', array('width' => '10%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
@@ -207,6 +208,11 @@ EOF;
 	if ($db->num_rows($query) > 0) {
 		while ($thread = $db->fetch_array($query)) {
 			$table->construct_cell($html->link($html->url(array('action' => 'view_thread', 'tid' => $thread['tid'])), $thread['subject']));
+
+			$threadUrl = '../'.get_thread_link($thread['tid']);
+			$threadLink = $html->link($threadUrl, "#{$thread['tid']}", array('target' => '_blank'));
+			$table->construct_cell($threadLink);
+
 			$table->construct_cell($thread['image_count']);
 
 			$popup = new PopupMenu("control_{$thread['tid']}", 'Options');
