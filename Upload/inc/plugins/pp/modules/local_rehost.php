@@ -68,6 +68,7 @@ function pp_local_rehost_process_images($images, $settings)
 	$redirectInfo = array(
 		'action' => 'view_thread',
 		'tid' => $tid,
+		'page' => $mybb->input['page'],
 	);
 
 	// build path

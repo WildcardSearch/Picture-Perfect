@@ -306,7 +306,21 @@ EOF;
 	$perPage = 12;
 	$totalPages = ceil($resultCount / $perPage);
 
-	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'configure')), 'post');
+	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
+	if (!isset($mybb->input['page']) ||
+		$mybb->input['page'] == '' ||
+		(int) $mybb->input['page'] < 1) {
+		// no page, page = 1
+		$mybb->input['page'] = 1;
+	} else if ($mybb->input['page'] > $totalPages) {
+		// past last page? page = last page
+		$mybb->input['page'] = $totalPages;
+	} else {
+		// in range? page = # in link
+		$mybb->input['page'] = (int) $mybb->input['page'];
+	}
+
+	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'configure', 'page' => $mybb->input['page'])), 'post');
 
 	if (is_array($modules) &&
 		!empty($modules)) {
@@ -357,20 +371,6 @@ EOF;
 	}
 
 	$table = new Table;
-
-	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
-	if (!isset($mybb->input['page']) ||
-		$mybb->input['page'] == '' ||
-		(int) $mybb->input['page'] < 1) {
-		// no page, page = 1
-		$mybb->input['page'] = 1;
-	} else if ($mybb->input['page'] > $totalPages) {
-		// past last page? page = last page
-		$mybb->input['page'] = $totalPages;
-	} else {
-		// in range? page = # in link
-		$mybb->input['page'] = (int) $mybb->input['page'];
-	}
 
 	// more than one page?
 	$start = ($mybb->input['page'] - 1) * $perPage;
@@ -1431,7 +1431,7 @@ function ppAddImagesToTaskList()
 	$selectedCount = count($selected);
 
 	$tid = (int) $mybb->input['tid'];
-	$redirectUrl = $html->url(array('action' => 'view_thread', 'tid' => $tid));
+	$redirectUrl = $html->url(array('action' => 'view_thread', 'tid' => $tid, 'page' => $mybb->input['page']));
 
 	if (!is_array($selected) ||
 		empty($selected)) {
@@ -1596,7 +1596,9 @@ EOF;
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
 	}
+
 	echo $form->generate_hidden_field('addon', $mybb->input['addon']);
+	echo $form->generate_hidden_field('page', $mybb->input['page']);
 
 	$formContainer->end();
 	$buttons[] = $form->generate_submit_button($lang->pp_process_submit, array('name' => 'process_submit'));
