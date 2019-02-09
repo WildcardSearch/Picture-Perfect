@@ -26,7 +26,7 @@ function task_pp_image_tasks($task)
 		$query = $db->simple_select('pp_image_task_lists', '*', "active=1 AND NOT images=''", array('order_by' => 'dateline', 'order_dir' => 'ASC', 'limit' => 1));
 
 		if ($db->num_rows($query) == 0) {
-			$report = 'Nothing to do.';
+			$report = 'Nothing to do. [No current task, no active tasks with pending images]';
 			add_task_log($task, $report);
 			return;
 		}
@@ -126,7 +126,7 @@ function task_pp_image_tasks($task)
 
 		$cache->update('current_task', null);
 
-		$report = 'Nothing to do.';
+		$report = 'Nothing to do. [No images available to task]';
 		add_task_log($task, $report);
 		return;
 	}
