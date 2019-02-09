@@ -949,7 +949,10 @@ EOF;
 	foreach ($tasks as $id => $task) {
 		$addonName = $modules[$task['addon']]->get('title');
 
-		$table->construct_cell($task['title']);
+		$editUrl = $html->url(array('action' => 'edit_image_task', 'id' => $id));
+		$editLink = $html->link($editUrl, $task['title']);
+
+		$table->construct_cell($editLink);
 		$table->construct_cell($task['description']);
 		$table->construct_cell($addonName);
 		$table->construct_cell($task['task_order']);
