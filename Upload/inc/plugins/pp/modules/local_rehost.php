@@ -72,16 +72,12 @@ function pp_local_rehost_process_images($images, $settings)
 	);
 
 	// build path
-	$domain = $settings['domain'];
-	if (!$domain) {
-		$domain = $mybb->settings['bburl'];
+	$domain = $mybb->settings['bburl'];
+	if ($settings['domain']) {
+		$domain = $settings['domain'];
 	}
 
 	$domain = ppCleanPath($domain);
-	if ($domain != $mybb->settings['bburl'] &&
-		!ppValidateDomain($domain)) {
-		$domain = $mybb->settings['bburl'];
-	}
 
 	$basePath = ppCleanPath($settings['path']);
 	$path = MYBB_ROOT.$basePath;
@@ -159,7 +155,12 @@ function pp_local_rehost_process_images($images, $settings)
 		@imagedestroy($image['image']);
 
 		// now swap the image URL in the post
-		$url = "{$domain}/{$basePath}/{$baseName}.{$ext}";
+		if ($domain == $mybb->settings['bburl']) {
+			$url = "{$domain}/{$basePath}/{$baseName}.{$ext}";
+		} else {
+			$url = "{$domain}/{$baseName}.{$ext}";
+		}
+
 		if (!ppReplacePostImage($image['pid'], $image['url'], $url)) {
 			$fail++;
 		} else {
