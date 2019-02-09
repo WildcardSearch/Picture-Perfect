@@ -16,7 +16,7 @@ function task_pp_image_tasks($task)
 	global $mybb, $db, $lang;
 
 	if (!$lang->pp) {
-		$lang->load('pp');
+		$lang->load('pp', false, true);
 	}
 
 	$cache = PicturePerfectCache::getInstance();
