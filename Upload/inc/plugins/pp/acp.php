@@ -403,9 +403,14 @@ EOF;
 		$images[$image['id']] = $image;
 	}
 
+	$baseDomain = ppGetBaseDomain($mybb->settings['bburl']);
+	if (!$baseDomain) {
+		$baseDomain = $mybb->settings['bburl'];
+	}
+
 	foreach ($images as $id => $image) {
 		$imageClass = '';
-		if (strpos($image['url'], $mybb->settings['bburl']) !== false) {
+		if (strpos($image['url'], $baseDomain) !== false) {
 			$imageClass = ' localImage';
 		}
 
@@ -1779,8 +1784,8 @@ function pp_admin_scan()
 	$fid = (int) $mybb->input['fid'];
 	$tid = (int) $mybb->input['tid'];
 	$lastPid = (int) $mybb->input['lastpid'];
-	
-	
+
+
 	if ($mybb->request_method == 'post') {
 		$threadCache = $cache->read('pp_thread_cache');
 
@@ -1838,7 +1843,7 @@ function pp_admin_scan()
 			foreach ($threadCache as $key => $count) {
 				$keyPieces = explode('-', $key);
 				list($forumId, $threadId) = $keyPieces;
-				
+
 				$insert_arrays[] = array(
 					'tid' => (int) $threadId,
 					'fid' => (int) $forumId,
@@ -2119,6 +2124,26 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 			}
 		}
 	}
+}
+
+/**
+ * extract just the domain from a URL
+ *
+ * @param  string
+ * @return bool|string
+ */
+function ppGetBaseDomain($url)
+{
+	$pieces = explode('.', $url);
+
+	if (count($pieces) < 2) {
+		return false;
+	}
+
+	$basePieces = array_slice($pieces, -2);
+	$base = implode('.', $basePieces);
+
+	return $base;
 }
 
 ?>
