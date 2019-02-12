@@ -263,8 +263,8 @@ function pp_admin_view_thread()
 	$threadTitle = $db->fetch_field($titleQuery, 'subject');
 
 	$shortTitle = $threadTitle;
-	if (my_strlen($shortTitle) > 20) {
-		$shortTitle = my_substr($threadTitle, 17).'...';
+	if (my_strlen($shortTitle) > 35) {
+		$shortTitle = my_substr($threadTitle, 0, 32).'...';
 	}
 
 	$page->add_breadcrumb_item($lang->pp);
