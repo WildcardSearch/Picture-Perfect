@@ -1304,7 +1304,7 @@ EOF;
 		$table->construct_cell($imageSetTitle);
 		$table->construct_cell($taskList['destination']);
 		$table->construct_cell($taskListStatus);
-		$table->construct_cell($form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all')));
+		$table->construct_cell($form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_check')));
 
 		$table->construct_row();
 	}
