@@ -283,29 +283,93 @@ function pp_admin_view_thread()
 	</script>
 
 	<style>
-		.pp_select_all {
-			float: right;
+		div.imageContainer {
+			padding: 0px;
+			margin: 0px;
+			border: 1px solid grey;
+
+			width: 320px;
+			height: 156px;
+
+			border-radius: 6px;
+			background: #f2f2f2;
 		}
 
-		td.selectedImage {
-			background: #0083ff !important;
+		div.imageInfo,
+		div.thumbnail,
+		div.infoRow,
+		div.buttonRow {
+			display: inline-block;
 		}
 
-		td.ppImage {
-			text-align: center;
-		}
+		div.thumbnail {
+			height: 150px;
+			width: 150px;
 
-		td.emptyCell {
-			border: none !important;
-		}
+			background-color: lightgrey;
+			background-size: cover;
 
-		.thumbnail {
-			width: 240px;
+			border: 4px solid grey;
+			border-radius: 6px 0px 0px 6px;
+
+			text-align: right;
+			vertical-align: top;
+
+			margin-right: 0px;
+			padding: 0px;
+
+			cursor: hand; /* IE */
 			cursor: pointer;
 		}
 
-		img.localImage {
-			border: 4px solid green;
+		div.thumbnail.localImage {
+			border-color: #32cd32;
+		}
+
+		div.imageInfo {
+			padding: 3px 0px 3px 0px;
+
+			margin-left: 0px;
+
+			height: 150px;
+			width: 150px;
+		}
+
+		div.blankElement {
+			height: 150px;
+			width: 300px;
+		}
+
+		div.infoRow {
+			padding: 10px 0px 10px 6px;
+			border-bottom: 1px solid lightgrey;
+			margin-right: 0px;
+		}
+
+		div.buttonRow {
+			padding-top: 16px;
+			padding-left: 93px;
+		}
+
+		div.imageLinks {
+			font-size: .95em;
+		}
+
+		div.imageDimensions {
+			font-size: .90em;
+		}
+
+		div.captionRow {
+		}
+
+		input.captionInput {
+			width: 125px;
+			margin-left: 0px;
+			padding: 3px 6px;
+		}
+
+		input.pp_check {
+			border: 2px inset grey;
 		}
 	</style>
 
@@ -386,6 +450,7 @@ EOF;
 	}
 
 	$table = new Table;
+	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')).' Select all images', array('width' => '20%', 'colspan' => 3));
 
 	// more than one page?
 	$start = ($mybb->input['page'] - 1) * $perPage;
@@ -408,35 +473,74 @@ EOF;
 		$baseDomain = $mybb->settings['bburl'];
 	}
 
+	$blankElement = <<<EOF
+<div class="blankElement">
+</div>
+EOF;
+
+	$iCount = 0;
 	foreach ($images as $id => $image) {
 		$imageClass = '';
 		if (strpos($image['url'], $baseDomain) !== false) {
 			$imageClass = ' localImage';
 		}
 
-		$imageElement = $html->img($image['url'], array('class' => "thumbnail{$imageClass}"));
+		$postUrl = get_post_link($image['pid']);
+		$postUrl = "{$mybb->settings['bburl']}/{$postUrl}#pid{$image['pid']}";
+		$postLink = $html->link($postUrl, 'Post Link', array('target' => '_blank'));
 
-		$table->construct_cell($form->generate_check_box("selected_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')), array('class' => 'ppImage'), array('class' => 'ppImage'));
+		$imageLink = $html->link($image['url'], 'Image Link', array('target' => '_blank'));
 
-		$count++;
-		if ($count == 4) {
-			$count = 0;
+		$popup = new PopupMenu("control_{$id}", 'Options');
+		$popup->add_item('Replace', '');
+		$popup->add_item('Delete', '');
+
+		$checkId = "imageCheck_{$id}";
+
+		$imageElement = <<<EOF
+<div class="imageContainer">
+	<label for="{$checkId}">
+		<div class="thumbnail{$imageClass}" style="background-image: url({$image['url']}), url(styles/{$cp_style}/images/pp/bad-image.png);">
+			<input id="{$checkId}" type="checkbox" name="selected_ids[{$id}]" value="" class="checkbox_input pp_check">
+		</div>
+	</label>
+	<div class="imageInfo">
+		<div class="infoRow imageLinks">
+			{$postLink} | {$imageLink}
+		</div>
+		<div class="infoRow imageDimensions">
+			<span>Width: 0px | Height: 0px;</span>
+		</div>
+		<div class="infoRow captionRow">
+			<input class="captionInput type="text" name="image_caption[{$id}]" value="" placeholder="Your caption here..."/>
+		</div>
+		<div class="buttonRow">
+			{$popup->fetch()}
+		</div>
+	</div>
+</div>
+EOF;
+
+		$table->construct_cell($imageElement);
+
+		if ($iCount > 1) {
 			$table->construct_row();
+			$iCount = 0;
+		} else {
+			$iCount++;
 		}
 	}
 
-	if ($count > 0 &&
-		$count < 4) {
-		while ($count < 4) {
-			$table->construct_cell('', array('class' => 'emptyCell'));
-			$count++;
+	$extra = count($images) % 3;
+	if ($extra > 0) {
+		for ($x=0; $x <= $extra; $x++) {
+			$table->construct_cell($blankElement);
 		}
+
 		$table->construct_row();
 	}
 
-	$checkbox = $form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all'));
-
-	$table->output($lang->pp_images.$checkbox);
+	$table->output($lang->pp_images);
 
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
