@@ -1398,7 +1398,7 @@ function pp_admin_edit_image_task_list()
 		}
 
 		flash_message('success', 'success');
-		admin_redirect($html->url(array('action' => 'edit_image_task_list', 'id' => $id)));
+		admin_redirect($html->url(array('action' => 'image_task_lists', 'id' => $id)));
 	}
 
 	$selected = array();
