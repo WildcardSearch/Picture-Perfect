@@ -533,7 +533,7 @@ EOF;
 
 	$extra = count($images) % 3;
 	if ($extra > 0) {
-		for ($x=0; $x <= $extra; $x++) {
+		for ($x=0; $x < (3 - $extra); $x++) {
 			$table->construct_cell($blankElement);
 		}
 
