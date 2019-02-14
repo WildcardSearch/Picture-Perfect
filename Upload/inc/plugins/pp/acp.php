@@ -960,6 +960,62 @@ function pp_admin_image_tasks()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
 
+	if ($mybb->request_method == 'post') {
+		// verify incoming POST request
+		if (!verify_post_check($mybb->input['my_post_key'])) {
+			flash_message($lang->invalid_post_verify_key2, 'error');
+			admin_redirect($html->url(array('action' => 'image_tasks')));
+		}
+
+		if ($mybb->input['mode'] == 'inline') {
+			if (!is_array($mybb->input['pp_inline_ids']) ||
+				empty($mybb->input['pp_inline_ids'])) {
+				flash_message($lang->pp_inline_selection_error, 'error');
+				admin_redirect($html->url(array('action' => 'image_tasks', 'page' => $mybb->input['page'])));
+			}
+
+			$job_count = 0;
+			foreach ($mybb->input['pp_inline_ids'] as $id => $throw_away) {
+				$task = new PicturePerfectImageTask($id);
+				if (!$task->isValid()) {
+					continue;
+				}
+
+				switch ($mybb->input['inline_action']) {
+				case 'delete':
+					$action = $lang->pp_deleted;
+					if (!$task->remove()) {
+						continue 2;
+					}
+					break;
+				}
+				++$job_count;
+			}
+
+			flash_message($lang->sprintf($lang->pp_inline_success, $job_count, $lang->image_tasks, $action), 'success');
+			admin_redirect($html->url(array('action' => 'image_tasks', 'page' => $mybb->input['page'])));
+		}
+	}
+
+	if ($mybb->input['mode'] == 'delete') {
+		// good info?
+		if (isset($mybb->input['id']) &&
+			(int) $mybb->input['id']) {
+			// then attempt deletion
+			$task = new PicturePerfectImageTask($mybb->input['id']);
+			if ($task->isValid()) {
+				$success = $task->remove();
+			}
+		}
+
+		if ($success) {
+			flash_message($lang->sprintf($lang->pp_message_success, $lang->image_tasks, $lang->pp_deleted), 'success');
+		} else {
+			flash_message($lang->sprintf($lang->pp_message_fail, $lang->image_tasks, $lang->pp_deleted), 'error');
+		}
+		admin_redirect($html->url(array('action' => 'image_tasks')));
+	}
+
 	$page->add_breadcrumb_item('Image Tasks');
 
 	// set up the page header
@@ -992,7 +1048,7 @@ EOF;
 	$perPage = 12;
 	$totalPages = ceil($resultCount / $perPage);
 
-	$form = new Form($html->url(array('action' => 'view_tasks', 'mode' => 'inline')), 'post');
+	$form = new Form($html->url(array('action' => 'image_tasks', 'mode' => 'inline')), 'post');
 
 	echo <<<EOF
 <div>
@@ -1019,7 +1075,7 @@ EOF;
 	$table->construct_header('Description', array('width' => '35%'));
 	$table->construct_header('Module', array('width' => '15%'));
 	$table->construct_header('Order', array('width' => '10%'));
-	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
+	$table->construct_header('', array('style' => 'width: 1%'));
 
 	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
 	if (!isset($mybb->input['page']) ||
@@ -1060,7 +1116,7 @@ EOF;
 		$table->construct_cell($task['description']);
 		$table->construct_cell($addonName);
 		$table->construct_cell($task['task_order']);
-		$table->construct_cell($form->generate_check_box("selected_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')));
+		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('class' => 'pp_check')));
 
 		$table->construct_row();
 	}
@@ -1360,7 +1416,7 @@ EOF;
 		$table->construct_cell($imageSetTitle);
 		$table->construct_cell($taskList['destination']);
 		$table->construct_cell($taskListStatus);
-		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('id' => 'pp_select_all', 'class' => 'pp_check')));
+		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('class' => 'pp_check')));
 
 		$table->construct_row();
 	}
