@@ -1185,6 +1185,62 @@ function pp_admin_image_task_lists()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
 
+	if ($mybb->request_method == 'post') {
+		// verify incoming POST request
+		if (!verify_post_check($mybb->input['my_post_key'])) {
+			flash_message($lang->invalid_post_verify_key2, 'error');
+			admin_redirect($html->url(array('action' => 'image_task_lists')));
+		}
+
+		if ($mybb->input['mode'] == 'inline') {
+			if (!is_array($mybb->input['pp_inline_ids']) ||
+				empty($mybb->input['pp_inline_ids'])) {
+				flash_message($lang->pp_inline_selection_error, 'error');
+				admin_redirect($html->url(array('action' => 'image_task_lists', 'page' => $mybb->input['page'])));
+			}
+
+			$job_count = 0;
+			foreach ($mybb->input['pp_inline_ids'] as $id => $throw_away) {
+				$taskList = new PicturePerfectImageTaskList($id);
+				if (!$taskList->isValid()) {
+					continue;
+				}
+
+				switch ($mybb->input['inline_action']) {
+				case 'delete':
+					$action = $lang->pp_deleted;
+					if (!$taskList->remove()) {
+						continue 2;
+					}
+					break;
+				}
+				++$job_count;
+			}
+
+			flash_message($lang->sprintf($lang->pp_inline_success, $job_count, $lang->image_task_lists, $action), 'success');
+			admin_redirect($html->url(array('action' => 'image_task_lists', 'page' => $mybb->input['page'])));
+		}
+	}
+
+	if ($mybb->input['mode'] == 'delete') {
+		// good info?
+		if (isset($mybb->input['id']) &&
+			(int) $mybb->input['id']) {
+			// then attempt deletion
+			$taskList = new PicturePerfectImageTaskList($mybb->input['id']);
+			if ($taskList->isValid()) {
+				$success = $taskList->remove();
+			}
+		}
+
+		if ($success) {
+			flash_message($lang->sprintf($lang->pp_message_success, $lang->image_task_lists, $lang->pp_deleted), 'success');
+		} else {
+			flash_message($lang->sprintf($lang->pp_message_fail, $lang->image_task_lists, $lang->pp_deleted), 'error');
+		}
+		admin_redirect($html->url(array('action' => 'image_task_lists')));
+	}
+
 	$page->add_breadcrumb_item('Image Task Lists');
 
 	// set up the page header
@@ -1217,7 +1273,7 @@ EOF;
 	$perPage = 12;
 	$totalPages = ceil($resultCount / $perPage);
 
-	$form = new Form($html->url(array('action' => 'view_task_lists', 'mode' => 'inline')), 'post');
+	$form = new Form($html->url(array('action' => 'image_task_lists', 'mode' => 'inline')), 'post');
 
 	echo <<<EOF
 <div>
@@ -1304,7 +1360,7 @@ EOF;
 		$table->construct_cell($imageSetTitle);
 		$table->construct_cell($taskList['destination']);
 		$table->construct_cell($taskListStatus);
-		$table->construct_cell($form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_check')));
+		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('id' => 'pp_select_all', 'class' => 'pp_check')));
 
 		$table->construct_row();
 	}
