@@ -257,7 +257,7 @@ function pp_admin_view_thread()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
 
-	$selected = $mybb->input['selected_ids'];
+	$selected = $mybb->input['pp_inline_ids'];
 	$tid = (int) $mybb->input['tid'];
 	$titleQuery = $db->simple_select('threads', 'subject', "tid={$tid}");
 	$threadTitle = $db->fetch_field($titleQuery, 'subject');
@@ -449,8 +449,13 @@ EOF;
 EOF;
 	}
 
+	/**
+	 * @todo create setting for images per row
+	 */
+	$ipr = 3;
+
 	$table = new Table;
-	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')).' Select all images', array('width' => '20%', 'colspan' => 3));
+	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')).' Select all images', array('width' => '20%', 'colspan' => $ipr));
 
 	// more than one page?
 	$start = ($mybb->input['page'] - 1) * $perPage;
@@ -472,11 +477,6 @@ EOF;
 	if (!$baseDomain) {
 		$baseDomain = $mybb->settings['bburl'];
 	}
-
-	$blankElement = <<<EOF
-<div class="blankElement">
-</div>
-EOF;
 
 	$iCount = 0;
 	foreach ($images as $id => $image) {
@@ -501,7 +501,7 @@ EOF;
 <div class="imageContainer">
 	<label for="{$checkId}">
 		<div class="thumbnail{$imageClass}" style="background-image: url({$image['url']}), url(styles/{$cp_style}/images/pp/bad-image.png);">
-			<input id="{$checkId}" type="checkbox" name="selected_ids[{$id}]" value="" class="checkbox_input pp_check">
+			<input id="{$checkId}" type="checkbox" name="pp_inline_ids[{$id}]" value="" class="checkbox_input pp_check">
 		</div>
 	</label>
 	<div class="imageInfo">
@@ -523,7 +523,7 @@ EOF;
 
 		$table->construct_cell($imageElement);
 
-		if ($iCount > 1) {
+		if ($iCount > ($ipr - 2)) {
 			$table->construct_row();
 			$iCount = 0;
 		} else {
@@ -531,9 +531,14 @@ EOF;
 		}
 	}
 
-	$extra = count($images) % 3;
+	$blankElement = <<<EOF
+<div class="blankElement">
+</div>
+EOF;
+
+	$extra = count($images) % $ipr;
 	if ($extra > 0) {
-		for ($x=0; $x < (3 - $extra); $x++) {
+		for ($x=0; $x < ($ipr - $extra); $x++) {
 			$table->construct_cell($blankElement);
 		}
 
@@ -543,7 +548,7 @@ EOF;
 	$table->output($lang->pp_images);
 
 	foreach ((array) $selected as $id => $throwAway) {
-		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
+		echo $form->generate_hidden_field("pp_inline_ids[{$id}]", 1);
 	}
 	echo $form->generate_hidden_field('tid', $tid);
 
@@ -918,7 +923,7 @@ EOF;
 
 		$imageElement = $html->img($image['url'].$cacheBuster, array('class' => "thumbnail{$imageClass}"));
 
-		$table->construct_cell($form->generate_check_box("selected_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')), array('class' => 'ppImage'), array('class' => 'ppImage'));
+		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')), array('class' => 'ppImage'), array('class' => 'ppImage'));
 
 		$count++;
 		if ($count == 4) {
@@ -1676,7 +1681,7 @@ function ppAddImagesToTaskList()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
 
-	$selected = $mybb->input['selected_ids'];
+	$selected = $mybb->input['pp_inline_ids'];
 	$selectedCount = count($selected);
 
 	$tid = (int) $mybb->input['tid'];
@@ -1733,7 +1738,7 @@ function pp_admin_process_images()
 		ppAddImagesToTaskList();
 	}
 
-	$selected = $mybb->input['selected_ids'];
+	$selected = $mybb->input['pp_inline_ids'];
 	$selectedCount = count($selected);
 
 	$tid = (int) $mybb->input['tid'];
@@ -1843,7 +1848,7 @@ EOF;
 	$module->outputSettings($formContainer);
 
 	foreach ((array) $selected as $id => $throwAway) {
-		echo $form->generate_hidden_field("selected_ids[{$id}]", 1);
+		echo $form->generate_hidden_field("pp_inline_ids[{$id}]", 1);
 	}
 
 	echo $form->generate_hidden_field('addon', $mybb->input['addon']);
@@ -1928,6 +1933,16 @@ function pp_admin_config_plugins_activate_commit() {
 	ppInitiateImageScan($lang->pp_finalizing_installation);
 }
 
+/**
+ * perform image scan according to parameters
+ *
+ * @param  string
+ * @param  int
+ * @param  int
+ * @param  bool
+ * @param  bool
+ * @return void
+ */
 function ppInitiateImageScan($message, $fid=0, $tid=0, $newOnly=false, $deleteFirst=false)
 {
 	global $db;
@@ -1971,6 +1986,11 @@ function ppInitiateImageScan($message, $fid=0, $tid=0, $newOnly=false, $deleteFi
 function pp_admin_scan()
 {
 	global $mybb, $page, $db, $lang, $cache, $min;
+
+	if (!$lang->pp) {
+		$lang->load('pp');
+	}
+
 	if ($page->active_action != 'pp') {
 		return false;
 	}
@@ -1979,10 +1999,6 @@ function pp_admin_scan()
 		$warning = '<br /><br />Skipping the image scan means that you will not see any images in the ACP interface. You will need to scan images from your forum\'s post before you can begin to use the plugin image processing modules.';
 		flash_message($lang->pp_installation_finished.$warning, 'success');
 		admin_redirect('index.php?module=config-plugins');
-	}
-
-	if (!$lang->pp) {
-		$lang->load('pp');
 	}
 
 	$inProgress = (int) $mybb->input['in_progress'];
