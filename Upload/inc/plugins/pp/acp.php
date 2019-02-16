@@ -283,94 +283,163 @@ function pp_admin_view_thread()
 	</script>
 
 	<style>
-		div.imageContainer {
-			padding: 0px;
-			margin: 0px;
-			border: 1px solid grey;
+div.imageContainer {
+	padding: 0px;
+	margin: 0px;
+	border: 1px solid grey;
 
-			width: 320px;
-			height: 156px;
+	width: 320px;
+	height: 156px;
 
-			border-radius: 6px;
-			background: #f2f2f2;
-		}
+	border-radius: 6px;
+	background: #f2f2f2;
+}
 
-		div.imageInfo,
-		div.thumbnail,
-		div.infoRow,
-		div.buttonRow {
-			display: inline-block;
-		}
+div.imageInfo,
+div.thumbnail,
+div.infoRow,
+div.buttonRow {
+	display: inline-block;
+}
 
-		div.thumbnail {
-			height: 150px;
-			width: 150px;
+div.thumbnail {
+	height: 150px;
+	width: 150px;
 
-			background-color: lightgrey;
-			background-size: cover;
+	background-color: lightgrey;
+	background-size: cover;
 
-			border: 4px solid grey;
-			border-radius: 6px 0px 0px 6px;
+	border: 4px solid grey;
+	border-radius: 6px 0px 0px 6px;
 
-			text-align: right;
-			vertical-align: top;
+	text-align: right;
+	vertical-align: top;
 
-			margin-right: 0px;
-			padding: 0px;
+	margin-right: 0px;
+	padding: 0px;
 
-			cursor: hand; /* IE */
-			cursor: pointer;
-		}
+	cursor: hand; /* IE */
+	cursor: pointer;
+}
 
-		div.thumbnail.localImage {
-			border-color: #32cd32;
-		}
+div.thumbnail.localImage {
+	border-color: #32cd32;
+}
 
-		div.imageInfo {
-			padding: 3px 0px 3px 0px;
+div.imageInfo {
+	padding: 3px 0px 3px 0px;
 
-			margin-left: 0px;
+	margin-left: 0px;
 
-			height: 150px;
-			width: 150px;
-		}
+	height: 150px;
+	width: 150px;
+}
 
-		div.blankElement {
-			height: 150px;
-			width: 300px;
-		}
+div.blankElement {
+	height: 150px;
+	width: 300px;
+}
 
-		div.infoRow {
-			padding: 10px 0px 10px 6px;
-			border-bottom: 1px solid lightgrey;
-			margin-right: 0px;
-		}
+div.infoRow {
+	padding: 10px 0px 10px 6px;
+	border-bottom: 1px solid lightgrey;
+	margin-right: 0px;
+}
 
-		div.buttonRow {
-			padding-top: 16px;
-			padding-left: 93px;
-		}
+div.buttonRow {
+	padding-top: 16px;
+	padding-left: 85px;
+}
 
-		div.imageLinks {
-			font-size: .95em;
-		}
+div.imageLinks {
+	font-size: .95em;
+}
 
-		div.imageDimensions {
-			font-size: .90em;
-		}
+div.imageDimensions {
+	font-size: .90em;
+}
 
-		div.captionRow {
-		}
+div.captionRow {
+}
 
-		input.captionInput {
-			width: 125px;
-			margin-left: 0px;
-			padding: 3px 6px;
-		}
+input.captionInput {
+	width: 125px;
+	margin-left: 0px;
+	padding: 3px 6px;
+}
 
-		input.pp_check {
-			border: 2px inset grey;
-		}
+input.pp_check {
+	border: 2px inset grey;
+}
+
+span.inlineSubmit {
+	margin-right: 100px;
+}
+
+#pp_select_all,
+#select-all-label {
+	cursor: hand;
+	cursor: pointer;
+}
+
+/** custom checkboxes **/
+
+.checkContainer {
+  position: relative;
+  cursor: pointer;
+  font-size: 22px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.checkContainer input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  top: -110px;
+  left: 120px;
+  height: 25px;
+  width: 25px;
+  background-color: rgba(127, 127, 127, 0.5);
+}
+
+.checkContainer:hover input ~ .checkmark {
+  background-color: rgba(191, 191, 191, 0.75);
+}
+
+.checkContainer input:checked ~ .checkmark {
+  background-color: #2196F3;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkContainer input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkContainer .checkmark:after {
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
 	</style>
 
 EOF;
@@ -411,17 +480,14 @@ EOF;
 EOF;
 		}
 
-		echo <<<EOF
-<div>
-	<span>
-		<strong>{$lang->pp_inline_title}:</strong>&nbsp;
-		<select name="addon">{$options}
-		</select>
-		<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} ({$selectedCount})"/>
-		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
-	</span>
-</div>
-<br />
+		$moduleSelect = <<<EOF
+<span class="inlineSubmit">
+	<strong>Process Images:</strong>&nbsp;
+	<select name="addon">{$options}
+	</select>
+	<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} ({$selectedCount})"/>
+	<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
+</span>
 EOF;
 	}
 
@@ -435,19 +501,20 @@ EOF;
 EOF;
 		}
 
-		echo <<<EOF
-<div>
-	<span>
-		<strong>Add to task list:</strong>&nbsp;
-		<select name="tasklist">{$taskOptions}
-		</select>
-		<input type="submit" class="pp_inline_submit button" name="pp_task_submit" value="{$lang->go} ({$selectedCount})"/>
-		<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
-	</span>
-</div>
-<br />
+		$taskListSelect = <<<EOF
+<span class="inlineSubmit">
+	<strong>Add to task list:</strong>&nbsp;
+	<select name="tasklist">{$taskOptions}
+	</select>
+	<input type="submit" class="pp_inline_submit button" name="pp_task_submit" value="{$lang->go} ({$selectedCount})"/>
+	<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
+</span>
 EOF;
 	}
+
+	$selectAllCheck = <<<EOF
+<span style="float: right;"><label id="select-all-label" for="pp_select_all">Select all images: <input type="checkbox" name="" value="" class="checkbox_input" id="pp_select_all" /></label></span>
+EOF;
 
 	/**
 	 * @todo create setting for images per row
@@ -455,7 +522,7 @@ EOF;
 	$ipr = 3;
 
 	$table = new Table;
-	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')).' Select all images', array('width' => '20%', 'colspan' => $ipr));
+	$table->construct_header($moduleSelect.$taskListSelect.$selectAllCheck, array('width' => '20%', 'colspan' => $ipr));
 
 	// more than one page?
 	$start = ($mybb->input['page'] - 1) * $perPage;
@@ -499,9 +566,10 @@ EOF;
 
 		$imageElement = <<<EOF
 <div class="imageContainer">
-	<label for="{$checkId}">
+	<label class="checkContainer" for="{$checkId}">
 		<div class="thumbnail{$imageClass}" style="background-image: url({$image['url']}), url(styles/{$cp_style}/images/pp/bad-image.png);">
-			<input id="{$checkId}" type="checkbox" name="pp_inline_ids[{$id}]" value="" class="checkbox_input pp_check">
+			<input id="{$checkId}" type="checkbox" name="pp_inline_ids[{$id}]" value="" class="checkbox_input pp_check" />
+			<span class="checkmark"></span>
 		</div>
 	</label>
 	<div class="imageInfo">
@@ -512,7 +580,7 @@ EOF;
 			<span>Width: 0px | Height: 0px;</span>
 		</div>
 		<div class="infoRow captionRow">
-			<input class="captionInput type="text" name="image_caption[{$id}]" value="" placeholder="Your caption here..."/>
+			<input class="captionInput" type="text" name="image_caption[{$id}]" value="" placeholder="Your caption here..."/>
 		</div>
 		<div class="buttonRow">
 			{$popup->fetch()}
