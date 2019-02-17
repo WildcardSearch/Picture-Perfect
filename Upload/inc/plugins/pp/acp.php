@@ -77,7 +77,8 @@ function pp_admin_main()
 		$forum = get_forum($fid);
 	}
 
-	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item('View Forums');
 
 	// set up the page header
 	$page->extra_header .= <<<EOF
@@ -120,7 +121,7 @@ function pp_admin_view_threads()
 
 	$forumName = htmlspecialchars_uni($forum['name']);
 
-	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item($lang->pp, $html->url());
 	$page->add_breadcrumb_item("View Image Threads in {$forumName}");
 
 	// set up the page header
@@ -198,7 +199,7 @@ EOF;
 	}
 
 	$queryString = <<<EOF
-		SELECT i.id, i.tid, i.image_count, t.subject
+		SELECT i.id, i.tid, i.image_count, t.subject, t.fid
 		FROM {$db->table_prefix}pp_image_threads i
 		LEFT JOIN {$db->table_prefix}threads t ON(t.tid=i.tid)
 		WHERE i.fid='{$fid}'
@@ -210,7 +211,7 @@ EOF;
 
 	if ($db->num_rows($query) > 0) {
 		while ($thread = $db->fetch_array($query)) {
-			$table->construct_cell($html->link($html->url(array('action' => 'view_thread', 'tid' => $thread['tid'])), $thread['subject']));
+			$table->construct_cell($html->link($html->url(array('action' => 'view_thread', 'tid' => $thread['tid'], 'fid' => $thread['fid'])), $thread['subject']));
 
 			$threadUrl = '../'.get_thread_link($thread['tid']);
 			$threadLink = $html->link($threadUrl, "#{$thread['tid']}", array('target' => '_blank'));
@@ -267,7 +268,19 @@ function pp_admin_view_thread()
 		$shortTitle = my_substr($threadTitle, 0, 32).'...';
 	}
 
-	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+
+	if (!isset($mybb->input['fid'])) {
+		$mybb->input['fid'] = 0;
+	}
+
+	$fid = $mybb->get_input('fid', MyBB::INPUT_INT);
+	if ($fid) {
+		$forum = get_forum($fid);
+		$forumName = htmlspecialchars_uni($forum['name']);
+		$page->add_breadcrumb_item("Threads in {$forumName}", $html->url(array('action' => 'view_threads', 'fid' => $fid)));
+	}
+
 	$page->add_breadcrumb_item("{$lang->pp_view_thread} #{$tid} ({$shortTitle})");
 
 	// set up the page header
@@ -646,6 +659,7 @@ function pp_admin_sets()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
 
+	$page->add_breadcrumb_item($lang->pp, $html->url());
 	$page->add_breadcrumb_item($lang->pp_admin_sets);
 
 	// set up the page header
@@ -840,7 +854,8 @@ function pp_admin_edit_set()
 		$data = $imageSet->get('data');
 	}
 
-	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item($lang->pp_admin_sets, $html->url(array('action' => 'sets')));
 	$page->add_breadcrumb_item("{$lang->pp_admin_edit_set} #{$id} ({$imageSet->get('title')})");
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_edit_set}");
@@ -927,7 +942,8 @@ EOF;
 	$id = (int) $mybb->input['id'];
 	$imageSet = new PicturePerfectImageSet($id);
 
-	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item($lang->pp_admin_sets, $html->url(array('action' => 'sets')));
 	$page->add_breadcrumb_item("{$lang->pp_admin_view_set} #{$id} ({$imageSet->get('title')})");
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_set}");
@@ -1094,6 +1110,7 @@ function pp_admin_image_tasks()
 		admin_redirect($html->url(array('action' => 'image_tasks')));
 	}
 
+	$page->add_breadcrumb_item($lang->pp, $html->url());
 	$page->add_breadcrumb_item('Image Tasks');
 
 	// set up the page header
@@ -1316,7 +1333,8 @@ function pp_admin_edit_image_task()
 		}
 	}
 
-	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item('Image Tasks', $html->url(array('action' => 'image_tasks')));
 	$page->add_breadcrumb_item("Edit Image Task #{$id} ({$task->get('title')})");
 
 	$page->output_header("{$lang->pp} - Edit Image Task");
@@ -1405,6 +1423,7 @@ function pp_admin_image_task_lists()
 		admin_redirect($html->url(array('action' => 'image_task_lists')));
 	}
 
+	$page->add_breadcrumb_item($lang->pp, $html->url());
 	$page->add_breadcrumb_item('Image Task Lists');
 
 	// set up the page header
@@ -1616,7 +1635,8 @@ function pp_admin_edit_image_task_list()
 		}
 	}
 
-	$page->add_breadcrumb_item($lang->pp);
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item('Image Task Lists', $html->url(array('action' => 'image_task_lists')));
 	$page->add_breadcrumb_item("Edit Image Task List #{$id} ({$taskList->get('title')})");
 
 	$page->output_header("{$lang->pp} - Edit Image Task List");
@@ -1651,6 +1671,9 @@ function pp_admin_scan_center()
 
 	$tid = (int) $mybb->input['tid'];
 	$fid = (int) $mybb->input['fid'];
+
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item('Image Scan Center', $html->url(array('action' => 'scan_center')));
 
 	if ($mybb->request_method == 'post' ||
 		$mybb->input['mode'] == 'inline') {
@@ -1721,8 +1744,6 @@ EOF;
 		$page->output_footer();
 		exit;
 	}
-
-	$page->add_breadcrumb_item('Image Scan Center');
 
 	$page->output_header("{$lang->pp} - Image Scan Center");
 	pp_output_tabs('pp_scan_center');
@@ -1848,24 +1869,6 @@ function pp_admin_process_images()
 		admin_redirect($redirectUrl);
 	}
 
-	$page->add_breadcrumb_item($lang->pp_admin_process_images);
-
-	// set up the page header
-	$page->extra_header .= <<<EOF
-	<style>
-		div.infoTitle {
-			font-weight: bold;
-			font-size: 1.5em;
-			text-shadow: 1px 1px 2px grey;
-		}
-
-		div.infoDescription {
-			font-style: italic;
-		}
-	</style>
-
-EOF;
-
 	if ($mybb->input['mode'] == 'finalize' ||
 		$doTask) {
 		if ($doTask) {
@@ -1911,6 +1914,25 @@ EOF;
 
 		admin_redirect($html->url($info['redirect']));
 	}
+
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item($lang->pp_admin_process_images);
+
+	// set up the page header
+	$page->extra_header .= <<<EOF
+	<style>
+		div.infoTitle {
+			font-weight: bold;
+			font-size: 1.5em;
+			text-shadow: 1px 1px 2px grey;
+		}
+
+		div.infoDescription {
+			font-style: italic;
+		}
+	</style>
+
+EOF;
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_process_images}");
 	pp_output_tabs('pp_process_images', $threadTitle, $tid);
@@ -2081,7 +2103,7 @@ function ppInitiateImageScan($message, $fid=0, $tid=0, $newOnly=false, $deleteFi
  */
 function pp_admin_scan()
 {
-	global $mybb, $page, $db, $lang, $cache, $min;
+	global $mybb, $page, $db, $lang, $cache, $min, $html;
 
 	if (!$lang->pp) {
 		$lang->load('pp');
@@ -2208,6 +2230,7 @@ function pp_admin_scan()
 		$cache->update('pp_thread_cache', $threadCache);
 	}
 
+	$page->add_breadcrumb_item($lang->pp, $html->url());
 	$page->add_breadcrumb_item($lang->pp_installation);
 
 	if ($inProgress) {
