@@ -103,6 +103,7 @@ function ppGetImageInfo($images)
 			break;
 		case 'image/png':
 			$image['extension'] = 'png';
+			break;
 		case 'image/gif':
 			$image['extension'] = 'gif';
 			break;
