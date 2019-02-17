@@ -40,7 +40,7 @@ function pp_admin()
 	}
 
 	// URL, link and image markup generator
-	$html = new HTMLGenerator010000(PICTURE_PERFECT_URL, array('ajax', 'fid'));
+	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'addon', 'pp_inline_ids'));
 
 	$modules = ppGetAllModules();
 
