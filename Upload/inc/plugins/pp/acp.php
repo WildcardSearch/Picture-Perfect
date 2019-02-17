@@ -618,7 +618,7 @@ EOF;
 		$table->construct_row();
 	}
 
-	$table->output($lang->pp_images);
+	$table->output(htmlspecialchars_uni("Images in \"{$threadTitle}\""));
 
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("pp_inline_ids[{$id}]", 1);
