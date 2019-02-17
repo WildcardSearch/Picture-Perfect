@@ -560,7 +560,11 @@ EOF;
 		$imageLink = $html->link($image['url'], 'Image Link', array('target' => '_blank'));
 
 		$popup = new PopupMenu("control_{$id}", 'Options');
-		$popup->add_item('Replace', '');
+
+		foreach ((array) $modules as $addon => $module) {
+			$popup->add_item($module->get('actionPhrase'), $html->url(array('action' => 'process_images', 'mode' => 'configure', 'addon' => $addon, 'pp_inline_ids' => array($id))));
+		}
+
 		$popup->add_item('Delete', '');
 
 		$checkId = "imageCheck_{$id}";
