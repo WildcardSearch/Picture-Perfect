@@ -6,7 +6,7 @@
  * produces standard or encoded URLs, HTML anchors and images
  */
 
-class HTMLGenerator010000
+class HTMLGenerator010001
 {
 	/**
 	 * @const version
@@ -119,9 +119,15 @@ class HTMLGenerator010000
 		foreach ((array) $this->allowed_url_keys as $item) {
 			if (isset($options[$item]) &&
 				$options[$item]) {
-				// and add them if set
-				$url .= "{$sep}{$item}={$options[$item]}";
-				$sep = $amp;
+				if (is_array($options[$item])) {
+					foreach ($options[$item] as $val) {
+						$url .= "{$sep}{$item}[{$val}]=";
+						$sep = $amp;
+					}
+				} else {
+					$url .= "{$sep}{$item}={$options[$item]}";
+					$sep = $amp;
+				}
 			}
 		}
 		return $url;

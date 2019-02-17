@@ -16,7 +16,7 @@ function task_pp_image_tasks($task)
 	global $mybb, $db, $lang;
 
 	if (!$lang->pp) {
-		$lang->load('pp');
+		$lang->load('pp', false, true);
 	}
 
 	$cache = PicturePerfectCache::getInstance();
@@ -26,14 +26,13 @@ function task_pp_image_tasks($task)
 		$query = $db->simple_select('pp_image_task_lists', '*', "active=1 AND NOT images=''", array('order_by' => 'dateline', 'order_dir' => 'ASC', 'limit' => 1));
 
 		if ($db->num_rows($query) == 0) {
-			$report = 'Nothing to do.';
+			$report = 'Nothing to do. [No current task, no active tasks with pending images]';
 			add_task_log($task, $report);
 			return;
 		}
 
 		$taskList = $db->fetch_array($query);
 
-		$setId = $taskList['setid'];
 		$imageList = $taskList['images'];
 		$destination = $taskList['destination'];
 		$lid = (int) $taskList['id'];
@@ -94,7 +93,6 @@ function task_pp_image_tasks($task)
 			'limit' => $imageLimit,
 			'images' => $images,
 			'destination' => $destination,
-			'setid' => $setId,
 		);
 
 		foreach ($imageArray as $imageId) {
@@ -110,11 +108,7 @@ function task_pp_image_tasks($task)
 		$taskList = $currentTask['taskList'];
 		$images = $currentTask['images'];
 		$imageLimit = $currentTask['limit'];
-		$setId = $currentTask['setid'];
 	}
-
-	// modules get setid from $_REQUEST
-	$mybb->input['setid'] = $setId;
 
 	$taskImages = array_slice($images, 0, $imageLimit);
 
@@ -126,13 +120,16 @@ function task_pp_image_tasks($task)
 
 		$cache->update('current_task', null);
 
-		$report = 'Nothing to do.';
+		$report = 'Nothing to do. [No images available to task]';
 		add_task_log($task, $report);
 		return;
 	}
 
 	$taskKey = key($taskImages[0]['tasks']);
 	$thisTask = $taskImages[0]['tasks'][$taskKey];
+
+	// modules get setid from $_REQUEST
+	$mybb->input['setid'] = $tasks[$thisTask]['setid'];
 
 	$taskPieces = explode('-', $thisTask);
 	$moduleKey = $taskPieces[0];

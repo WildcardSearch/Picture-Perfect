@@ -103,6 +103,7 @@ function ppGetImageInfo($images)
 			break;
 		case 'image/png':
 			$image['extension'] = 'png';
+			break;
 		case 'image/gif':
 			$image['extension'] = 'gif';
 			break;
@@ -293,7 +294,7 @@ function ppStorePostedImages($pid, $tid, $fid, $message)
  * @param  int
  * @return string
  */
-function ppGetPostImages($message)
+function ppGetPostImages($message, $full=false)
 {
 	$patterns = array(
 		array(
@@ -332,7 +333,13 @@ function ppGetPostImages($message)
 
 		foreach ($matches as $match) {
 			$url = $match[$patternArray['key']];
-			$images[] = $url;
+
+			if ($full !== true) {
+				$images[] = $url;
+				continue;
+			}
+
+			$images[] = $match[0];
 		}
 	}
 	return $images;
@@ -364,6 +371,14 @@ function ppStripQuotes($message)
 	return preg_replace($find, '', $message);
 }
 
+/**
+ * replace the URL of any image MyCodes in the specified post
+ *
+ * @param  int
+ * @param  string
+ * @param  string
+ * @return bool success/fail
+ */
 function ppReplacePostImage($pid, $currentUrl, $newUrl)
 {
 	global $db;
@@ -374,13 +389,54 @@ function ppReplacePostImage($pid, $currentUrl, $newUrl)
 	}
 
 	$query = $db->simple_select('posts', 'message', "pid='{$pid}'");
+	if ($db->num_rows($query) <= 0) {
+		return false;
+	}
+
 	$message = $db->fetch_field($query, 'message');
 
 	$message = str_replace($currentUrl, $newUrl, $message);
 
 	$db->update_query('posts', array('message' => $db->escape_string($message)), "pid='{$pid}'");
 
-	return $message;
+	return true;
+}
+
+/**
+ * remove any image MyCodes in the specified post completely
+ *
+ * @param  array image info
+ * @return bool success/fail
+ */
+function ppRemovePostedImage($image)
+{
+	global $db;
+
+	$pid = (int) $image['pid'];
+	if (!$pid) {
+		return false;
+	}
+
+	$query = $db->simple_select('posts', 'message', "pid='{$pid}'");
+	if ($db->num_rows($query) <= 0) {
+		return false;
+	}
+
+	$message = $db->fetch_field($query, 'message');
+
+	$images = ppGetPostImages($message, true);
+
+	foreach($images as $fullCode) {
+		if (strpos($fullCode, $image['url']) === false) {
+			continue;
+		}
+
+		$message = str_replace($fullCode, '', $message);
+	}
+
+	$db->update_query('posts', array('message' => $db->escape_string($message)), "pid='{$pid}'");
+
+	return strpos($image['url'], $message) === false;
 }
 
 /**

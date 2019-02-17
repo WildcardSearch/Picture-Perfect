@@ -37,6 +37,7 @@ $tables = array(
 			'id' => 'SERIAL',
 			'lid' => 'INT',
 			'pid' => 'INT',
+			'setid' => 'INT',
 			'title' => 'TEXT',
 			'description' => 'TEXT',
 			'addon' => 'TEXT NOT NULL',
@@ -49,7 +50,6 @@ $tables = array(
 			'title' => 'TEXT',
 			'description' => 'TEXT',
 			'images' => 'TEXT',
-			'setid' => 'INT',
 			'destination' => 'TEXT',
 			'active' => 'INT',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
@@ -83,6 +83,7 @@ $tables = array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
 		'lid' => 'INT(10)',
 		'pid' => 'INT(10)',
+		'setid' => 'INT(1)',
 		'title' => 'TEXT',
 		'description' => 'TEXT',
 		'addon' => 'TEXT NOT NULL',
@@ -95,7 +96,6 @@ $tables = array(
 		'title' => 'TEXT',
 		'description' => 'TEXT',
 		'images' => 'TEXT',
-		'setid' => 'INT(1)',
 		'destination' => 'TEXT',
 		'active' => 'INT(1)',
 		'dateline' => 'INT(10) NOT NULL',
@@ -145,6 +145,11 @@ EOF
 		'manage.png' => array(
 			'image' => <<<EOF
 iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAGFBMVEUAAAAlJSUmJiZERERGRkZNTU2Ojo7///9zy8a1AAAAAWJLR0QAiAUdSAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB+ECBRcENABjRZEAAABLSURBVAjXY2AAAbPycga2tLS0ADCjvLy8AA9DFMwoAGuEMFTLAxhYQQy38gSIMIhhbCyg4gJiAM0NS0sDMoCagQagMYBSaWAGWCMAcOcmgAP/MAEAAAAASUVORK5CYII=
+EOF
+		),
+		'bad-image.png' => array(
+			'image' => <<<EOF
+iVBORw0KGgoAAAANSUhEUgAAAJYAAACWCAYAAAA8AXHiAAAABmJLR0QARABzANJqWiAHAAAACXBIWXMAAC3UAAAt1AEYYcVpAAAAB3RJTUUH4wIQDyQMhd8twwAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAGVSURBVHja7dqxDcMgAERRYrER0zIUMzl9Cld3ReT3Wuu6L5AsPnvvezw45zx9HmutYW//6xpQICyEhbAQFggLYfFm038a+8beiYWrEGEhLBAWwkJYEDb9p7Fv7J1YuAoRFsICYSEshAVh3mPZV/ZOLFyFCAthgbAQFsKCMO+x7Ct7JxauQoSFsEBYCAthQZj3WPaVvRMLVyHCQlggLISFsCDMeyz7yt6JhasQYSEsEBbCQlgQ5j2WfWXvxMJViLAQFggLYSEsCPMey76yd2LhKkRYCAuEhbAQFoR5j2Vf2TuxcBUiLIQFwkJYCAvCvMeyr+ydWLgKERbCAmEhLIQFYd5j2Vf2TixchQgLYYGwEBbCgjDvsewreycWrkKEhbBAWAgLYUGY91j2lb0TC1chwkJYICyEhbAgzHss+8reiYWrEGEhLBAWwkJYEOY9ln1l78TCVYiwEBYIC2EhLAjzHsu+sndi4SpEWAgLhIWwEBaEeY9lX9k7sXAVIiyEBcJCWAgLwrzHsq/snVi4ChEWwgJh8Se+5aYgOLxkeTMAAAAASUVORK5CYII=
 EOF
 		),
 	),

@@ -11,6 +11,7 @@ class PicturePerfectImageTask extends StorableObject010000
 {
 	protected $lid = 0;
 	protected $pid = 0;
+	protected $setid = 0;
 	protected $title = '';
 	protected $description = '';
 	protected $addon = '';
