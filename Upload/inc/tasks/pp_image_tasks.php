@@ -33,7 +33,6 @@ function task_pp_image_tasks($task)
 
 		$taskList = $db->fetch_array($query);
 
-		$setId = $taskList['setid'];
 		$imageList = $taskList['images'];
 		$destination = $taskList['destination'];
 		$lid = (int) $taskList['id'];
@@ -94,7 +93,6 @@ function task_pp_image_tasks($task)
 			'limit' => $imageLimit,
 			'images' => $images,
 			'destination' => $destination,
-			'setid' => $setId,
 		);
 
 		foreach ($imageArray as $imageId) {
@@ -110,11 +108,7 @@ function task_pp_image_tasks($task)
 		$taskList = $currentTask['taskList'];
 		$images = $currentTask['images'];
 		$imageLimit = $currentTask['limit'];
-		$setId = $currentTask['setid'];
 	}
-
-	// modules get setid from $_REQUEST
-	$mybb->input['setid'] = $setId;
 
 	$taskImages = array_slice($images, 0, $imageLimit);
 
@@ -133,6 +127,9 @@ function task_pp_image_tasks($task)
 
 	$taskKey = key($taskImages[0]['tasks']);
 	$thisTask = $taskImages[0]['tasks'][$taskKey];
+
+	// modules get setid from $_REQUEST
+	$mybb->input['setid'] = $tasks[$thisTask]['setid'];
 
 	$taskPieces = explode('-', $thisTask);
 	$moduleKey = $taskPieces[0];

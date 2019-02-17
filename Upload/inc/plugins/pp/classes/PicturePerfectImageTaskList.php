@@ -12,7 +12,6 @@ class PicturePerfectImageTaskList extends StorableObject010000
 	protected $title = '';
 	protected $description = '';
 	protected $images = '';
-	protected $setid = 0;
 	protected $destination = '';
 	protected $active = false;
 

@@ -470,22 +470,23 @@ EOF;
 
 	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'configure', 'page' => $mybb->input['page'])), 'post');
 
-	if (is_array($modules) &&
-		!empty($modules)) {
+	$taskQuery = $db->simple_select('pp_image_tasks', '*', "pid='0'", array('order_by' => 'title', 'order_dir' => 'ASC'));
+
+	if ($db->num_rows($taskQuery)) {
 		$options = '';
-		foreach ($modules as $key => $module) {
+		while ($task = $db->fetch_array($taskQuery)) {
 			$options .= <<<EOF
 
-			<option value="{$key}">{$module->get('actionPhrase')}</option>
+			<option value="{$task['id']}">{$task['title']}</option>
 EOF;
 		}
 
-		$moduleSelect = <<<EOF
+		$taskSelect = <<<EOF
 <span class="inlineSubmit">
 	<strong>Process Images:</strong>&nbsp;
-	<select name="addon">{$options}
+	<select name="task">{$options}
 	</select>
-	<input type="submit" class="pp_inline_submit button" name="pp_inline_submit" value="{$lang->go} ({$selectedCount})"/>
+	<input type="submit" class="pp_inline_submit button" name="pp_inline_task" value="{$lang->go} ({$selectedCount})"/>
 	<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
 </span>
 EOF;
@@ -522,7 +523,7 @@ EOF;
 	$ipr = 3;
 
 	$table = new Table;
-	$table->construct_header($moduleSelect.$taskListSelect.$selectAllCheck, array('width' => '20%', 'colspan' => $ipr));
+	$table->construct_header($taskSelect.$taskListSelect.$selectAllCheck, array('width' => '20%', 'colspan' => $ipr));
 
 	// more than one page?
 	$start = ($mybb->input['page'] - 1) * $perPage;
@@ -1232,18 +1233,39 @@ function pp_admin_edit_image_task()
 
 	if ($mybb->request_method == 'post') {
 		$module = $modules[$mybb->input['addon']];
+
 		if ($mybb->input['mode'] == 'configure') {
 			$page->add_breadcrumb_item('Configure Image Task');
 
 			$page->output_header("{$lang->pp} - Configure Image Task");
 			pp_output_tabs('pp_configure_image_task');
 
+			if ($mybb->input['setid'] == 'new') {
+				$imageSet = new PicturePerfectImageSet(array(
+					'title' => "{$mybb->input['title']} (set)",
+					'description' => "image set for {$mybb->input['title']}",
+				));
+
+				$mybb->input['setid'] = $imageSet->save();
+				if (!$mybb->input['setid']) {
+					flash_message('could not save image set', 'error');
+					admin_redirect($html->url(array('action' => 'image_task_lists')));
+				}
+			} else {
+				$imageSet = new PicturePerfectImageSet($mybb->input['setid']);
+
+				if (!$imageSet->isValid()) {
+					flash_message('Invalid image set', 'error');
+					admin_redirect($html->url(array('action' => 'image_task_lists')));
+				}
+			}
+
 			$form = new Form($html->url(array('action' => 'edit_image_task')), 'post');
 			$formContainer = new FormContainer($module->get('title').' Settings');
 
 			$module->outputSettings($formContainer);
 
-			echo($form->generate_hidden_field('id', $id).$form->generate_hidden_field('addon', $mybb->input['addon']).$form->generate_hidden_field('title', $mybb->input['title']).$form->generate_hidden_field('description', $mybb->input['description']).$form->generate_hidden_field('task_order', $mybb->input['task_order']));
+			echo($form->generate_hidden_field('id', $id).$form->generate_hidden_field('addon', $mybb->input['addon']).$form->generate_hidden_field('title', $mybb->input['title']).$form->generate_hidden_field('description', $mybb->input['description']).$form->generate_hidden_field('task_order', $mybb->input['task_order']).$form->generate_hidden_field('setid', $mybb->input['setid']));
 
 			$formContainer->end();
 			$buttons[] = $form->generate_submit_button('Save Task', array('name' => 'process_submit'));
@@ -1282,6 +1304,14 @@ function pp_admin_edit_image_task()
 		}
 	}
 
+	$sets = array('new' => 'new set');
+	$query = $db->simple_select('pp_image_sets', '*');
+	if ($db->num_rows($query)) {
+		while ($set = $db->fetch_array($query)) {
+			$sets[$set['id']] = $set['title'];
+		}
+	}
+
 	$page->add_breadcrumb_item($lang->pp);
 	$page->add_breadcrumb_item("Edit Image Task #{$id} ({$task->get('title')})");
 
@@ -1295,6 +1325,7 @@ function pp_admin_edit_image_task()
 	$formContainer->output_row('Title', '', $form->generate_text_box('title', $data['title']));
 	$formContainer->output_row('Description', '', $form->generate_text_box('description', $data['description']));
 	$formContainer->output_row('Module', '', $form->generate_select_box('addon', $options));
+	$formContainer->output_row('Image Set', '', $form->generate_select_box('setid', $sets, $data['setid']));
 	$formContainer->output_row('Order', '', $form->generate_text_box('task_order', $data['task_order']).$form->generate_hidden_field('id', $id).$form->generate_hidden_field('pid', 0));
 
 	$formContainer->end();
@@ -1428,7 +1459,6 @@ EOF;
 	$table->construct_header('Title', array('width' => '25%'));
 	$table->construct_header('Description', array('width' => '25%'));
 	$table->construct_header('Images', array('width' => '5%'));
-	$table->construct_header('Image Set', array('width' => '15%'));
 	$table->construct_header('Location', array('width' => '15%'));
 	$table->construct_header('Status', array('width' => '10%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
@@ -1477,7 +1507,6 @@ EOF;
 			$imageCount = 0;
 		}
 
-		$imageSetTitle = $imageSets[$taskList['setid']];
 		$taskListStatus = $taskList['active'] ? 'Active' : 'Inactive';
 
 		$editUrl = $html->url(array('action' => 'edit_image_task_list', 'id' => $id));
@@ -1486,7 +1515,6 @@ EOF;
 		$table->construct_cell($editLink);
 		$table->construct_cell($taskList['description']);
 		$table->construct_cell($imageCount);
-		$table->construct_cell($imageSetTitle);
 		$table->construct_cell($taskList['destination']);
 		$table->construct_cell($taskListStatus);
 		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('class' => 'pp_check')));
@@ -1533,26 +1561,6 @@ function pp_admin_edit_image_task_list()
 	}
 
 	if ($mybb->request_method == 'post') {
-		if ($mybb->input['setid'] == 'new') {
-			$imageSet = new PicturePerfectImageSet(array(
-				'title' => "{$mybb->input['title']} (set)",
-				'description' => "image set for {$mybb->input['title']}",
-			));
-
-			$mybb->input['setid'] = $imageSet->save();
-			if (!$mybb->input['setid']) {
-				flash_message('could not save image set', 'error');
-				admin_redirect($html->url(array('action' => 'image_task_lists')));
-			}
-		} else {
-			$imageSet = new PicturePerfectImageSet($mybb->input['setid']);
-
-			if (!$imageSet->isValid()) {
-				flash_message('Invalid image set', 'error');
-				admin_redirect($html->url(array('action' => 'image_task_lists')));
-			}
-		}
-
 		if (empty($mybb->input['tasks'])) {
 			flash_message('No tasks selected', 'error');
 			admin_redirect($html->url(array('action' => 'image_task_lists')));
@@ -1604,14 +1612,6 @@ function pp_admin_edit_image_task_list()
 		}
 	}
 
-	$sets = array('new' => 'new set');
-	$query = $db->simple_select('pp_image_sets', '*');
-	if ($db->num_rows($query)) {
-		while ($set = $db->fetch_array($query)) {
-			$sets[$set['id']] = $set['title'];
-		}
-	}
-
 	$page->add_breadcrumb_item($lang->pp);
 	$page->add_breadcrumb_item("Edit Image Task List #{$id} ({$taskList->get('title')})");
 
@@ -1625,7 +1625,6 @@ function pp_admin_edit_image_task_list()
 	$formContainer->output_row('Title', '', $form->generate_text_box('title', $data['title']));
 	$formContainer->output_row('Description', '', $form->generate_text_box('description', $data['description']));
 	$formContainer->output_row('Task(s)', '', $form->generate_select_box('tasks[]', $options, $selected, array('multiple' => true)));
-	$formContainer->output_row('Image Set', '', $form->generate_select_box('setid', $sets, $data['setid']));
 	$formContainer->output_row('Destination Path', '', $form->generate_text_box('destination', $data['destination']).$form->generate_hidden_field('id', $id));
 	$formContainer->output_row('Active?', '', $form->generate_yes_no_radio('active', $data['active']));
 
@@ -1806,6 +1805,28 @@ function pp_admin_process_images()
 		ppAddImagesToTaskList();
 	}
 
+	$doTask = false;
+	if (isset($mybb->input['pp_inline_task'])) {
+		$doTask = true;
+
+		$task = new PicturePerfectImageTask($mybb->input['task']);
+		$taskId = (int) $task->get('id');
+
+		if (!$taskId) {
+			flash_message('Invalid task', 'error');
+			admin_redirect($redirectUrl);
+		}
+
+		$module = new PicturePerfectModule($task->get('addon'));
+	} else {
+		$module = new PicturePerfectModule($mybb->input['addon']);
+	}
+
+	if (!$module->isValid()) {
+		flash_message($lang->pp_process_images_fail_invalid_module, 'error');
+		admin_redirect($redirectUrl);
+	}
+
 	$selected = $mybb->input['pp_inline_ids'];
 	$selectedCount = count($selected);
 
@@ -1815,12 +1836,6 @@ function pp_admin_process_images()
 	if (!is_array($selected) ||
 		empty($selected)) {
 		flash_message('no images', 'error');
-		admin_redirect($redirectUrl);
-	}
-
-	$module = new PicturePerfectModule($mybb->input['addon']);
-	if (!$module->isValid()) {
-		flash_message($lang->pp_process_images_fail_invalid_module, 'error');
 		admin_redirect($redirectUrl);
 	}
 
@@ -1847,11 +1862,16 @@ function pp_admin_process_images()
 
 EOF;
 
-	if ($mybb->input['mode'] == 'finalize') {
-		$extra = '';
-		if ($mybb->input['setid'] == 'new') {
-			$mybb->input['setid'] = 0;
-			$extra = $lang->pp_process_images_finalize_success_extra;
+	if ($mybb->input['mode'] == 'finalize' ||
+		$doTask) {
+		if ($doTask) {
+			$mybb->input['setid'] = $task->get('setid');
+		} else {
+			$extra = '';
+			if ($mybb->input['setid'] == 'new') {
+				$mybb->input['setid'] = 0;
+				$extra = $lang->pp_process_images_finalize_success_extra;
+			}
 		}
 
 		$imageArray = array_keys($selected);
@@ -1867,11 +1887,15 @@ EOF;
 			$images[$image['id']] = $image;
 		}
 
-		$settings = array();
-		foreach ($module->get('settings') as $name => $setting) {
-			$settings[$name] = $setting['value'];
-			if (isset($mybb->input[$name])) {
-				$settings[$name] = $mybb->input[$name];
+		if ($doTask) {
+			$settings = $task->get('settings');
+		} else {
+			$settings = array();
+			foreach ($module->get('settings') as $name => $setting) {
+				$settings[$name] = $setting['value'];
+				if (isset($mybb->input[$name])) {
+					$settings[$name] = $mybb->input[$name];
+				}
 			}
 		}
 
