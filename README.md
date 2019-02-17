@@ -1,6 +1,6 @@
 <img src="https://i.imgur.com/yCAmIp8.png" alt="Picture Perfect Logo" />
 
-# Picture Perfect 0.0.5 ALPHA
+# Picture Perfect 0.0.6 ALPHA
 for MyBB 1.8.x
 
 *make your MyBB forum images just right*
