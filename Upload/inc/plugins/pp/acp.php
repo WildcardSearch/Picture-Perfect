@@ -51,18 +51,20 @@ function pp_admin()
 		$page_function();
 	} else {
 		// default to the main page
-		pp_admin_main();
+		pp_admin_forums();
 	}
 	// get out
 	exit();
 }
+
+	/** page functions **/
 
 /**
  * main page
  *
  * @return void
  */
-function pp_admin_main()
+function pp_admin_forums()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
 
@@ -138,7 +140,7 @@ function pp_admin_view_threads()
 
 EOF;
 
-	$page->output_header("{$lang->pp} - {$lang->pp_admin_main} - {$forum['name']}");
+	$page->output_header("{$lang->pp} &mdash; {$forum['name']}");
 	pp_output_tabs('pp_view_threads');
 
 	$query = $db->simple_select('pp_image_threads', 'COUNT(id) as resultCount', "fid='{$fid}'");
@@ -643,7 +645,6 @@ EOF;
 
 	// more than one page?
 	if ($resultCount > $perPage) {
-		// if so show pagination on the right this time just to be weird
 		echo($pagination);
 	}
 
@@ -1765,59 +1766,6 @@ EOF;
 }
 
 /**
- * merge new images into an existing task list
- *
- * @return void
- */
-function ppAddImagesToTaskList()
-{
-	global $mybb, $db, $page, $lang, $html, $min;
-
-	$selected = $mybb->input['pp_inline_ids'];
-	$selectedCount = count($selected);
-
-	$tid = (int) $mybb->input['tid'];
-	$redirectUrl = $html->url(array('action' => 'view_thread', 'tid' => $tid, 'page' => $mybb->input['page']));
-
-	if (!is_array($selected) ||
-		empty($selected)) {
-		flash_message('no images', 'error');
-		admin_redirect($redirectUrl);
-	}
-
-	if (!$mybb->input['tasklist']) {
-		flash_message('bad task list', 'error');
-		admin_redirect($redirectUrl);
-	}
-
-	$taskList = new PicturePerfectImageTaskList($mybb->input['tasklist']);
-
-	if (!$taskList->isValid()) {
-		flash_message('invalid image task list', 'error');
-		admin_redirect($redirectUrl);
-	}
-
-	$currentImages = $taskList->get('images');
-	if (empty($currentImages)) {
-		$currentArray = array();
-	} else {
-		$currentArray = explode(',', $currentImages);
-	}
-
-	$mergedArray = array_merge($currentArray, array_keys($selected));
-	$mergedImages = implode(',', $mergedArray);
-	$taskList->set('images', $mergedImages);
-
-	if (!$taskList->save()) {
-		flash_message('could not save task list', 'error');
-		admin_redirect($redirectUrl);
-	}
-
-	flash_message('saved task list okay', 'success');
-	admin_redirect($redirectUrl);
-}
-
-/**
  * perform image tasks
  *
  * @return void
@@ -1978,122 +1926,6 @@ EOF;
 	$form->end();
 
 	$page->output_footer();
-}
-
-/**
- * @param  array items on the config tab
- * @return void
- */
-$plugins->add_hook('admin_config_action_handler', 'pp_admin_config_action_handler');
-function pp_admin_config_action_handler(&$action)
-{
-	$action['pp'] = array('active' => 'pp');
-}
-
-/**
- * add an entry to the ACP Config page menu
- *
- * @param  array menu
- * @return void
- */
-$plugins->add_hook('admin_config_menu', 'pp_admin_config_menu');
-function pp_admin_config_menu(&$sub_menu)
-{
-	global $lang;
-	if (!$lang->pp) {
-		$lang->load('pp');
-	}
-
-	end($sub_menu);
-	$key = (key($sub_menu)) + 10;
-	$sub_menu[$key] = array(
-		'id' => 'pp',
-		'title' => $lang->pp,
-		'link' => PICTURE_PERFECT_URL
-	);
-}
-
-/**
- * add an entry to admin permissions list
- *
- * @param  array permission types
- * @return void
- */
-$plugins->add_hook('admin_config_permissions', 'pp_admin_config_permissions');
-function pp_admin_config_permissions(&$admin_permissions)
-{
-	global $lang;
-
-	if (!$lang->pp) {
-		$lang->load('pp');
-	}
-	$admin_permissions['pp'] = $lang->pp_admin_permissions_desc;
-}
-
-/**
- * perform image scan after standard installation
- *
- * @return void
- */
-$plugins->add_hook('admin_config_plugins_activate_commit', 'pp_admin_config_plugins_activate_commit');
-function pp_admin_config_plugins_activate_commit() {
-	global $lang, $db;
-
-	$query = $db->simple_select('pp_images', 'id');
-	if ($db->num_rows($query) > 0) {
-		return;
-	}
-
-	if (!$lang->pp) {
-		$lang->load('pp');
-	}
-
-	ppInitiateImageScan($lang->pp_finalizing_installation);
-}
-
-/**
- * perform image scan according to parameters
- *
- * @param  string
- * @param  int
- * @param  int
- * @param  bool
- * @param  bool
- * @return void
- */
-function ppInitiateImageScan($message, $fid=0, $tid=0, $newOnly=false, $deleteFirst=false)
-{
-	global $db;
-
-	$fid = (int) $fid;
-	$tid = (int) $tid;
-
-	$where = $queryExtra = '';
-	if ($tid) {
-		$queryExtra = "&tid={$tid}";
-		$where = "tid='{$tid}'";
-	} elseif($fid) {
-		$queryExtra = "&fid={$fid}";
-		$where = "fid='{$fid}'";
-	}
-
-	if ($deleteFirst) {
-		$db->delete_query('pp_images', $where);
-		$db->delete_query('pp_image_threads', $where);
-	} elseif ($newOnly) {
-		$query = $db->simple_select('pp_images', 'pid', $where, array('order_by' => 'pid', 'order_dir' => 'DESC', 'limit' => 1));
-
-		$lastPid = (int) $db->fetch_field($query, 'pid');
-		$where .= " AND pid > {$lastPid}";
-
-		$queryExtra .= "&lastpid={$lastPid}";
-	}
-
-	$query = $db->simple_select('posts', 'COUNT(pid) as resultCount', $where);
-	$count = (int) $db->fetch_field($query, 'resultCount');
-
-	flash_message($message, 'success');
-	admin_redirect("index.php?module=config-pp&action=scan&count={$count}{$queryExtra}");
 }
 
 /**
@@ -2275,6 +2107,81 @@ EOF;
 	$page->output_footer();
 	exit;
 }
+
+	/** hook functions **/
+
+/**
+ * @param  array items on the config tab
+ * @return void
+ */
+$plugins->add_hook('admin_config_action_handler', 'pp_admin_config_action_handler');
+function pp_admin_config_action_handler(&$action)
+{
+	$action['pp'] = array('active' => 'pp');
+}
+
+/**
+ * add an entry to the ACP Config page menu
+ *
+ * @param  array menu
+ * @return void
+ */
+$plugins->add_hook('admin_config_menu', 'pp_admin_config_menu');
+function pp_admin_config_menu(&$sub_menu)
+{
+	global $lang;
+	if (!$lang->pp) {
+		$lang->load('pp');
+	}
+
+	end($sub_menu);
+	$key = (key($sub_menu)) + 10;
+	$sub_menu[$key] = array(
+		'id' => 'pp',
+		'title' => $lang->pp,
+		'link' => PICTURE_PERFECT_URL
+	);
+}
+
+/**
+ * add an entry to admin permissions list
+ *
+ * @param  array permission types
+ * @return void
+ */
+$plugins->add_hook('admin_config_permissions', 'pp_admin_config_permissions');
+function pp_admin_config_permissions(&$admin_permissions)
+{
+	global $lang;
+
+	if (!$lang->pp) {
+		$lang->load('pp');
+	}
+	$admin_permissions['pp'] = $lang->pp_admin_permissions_desc;
+}
+
+/**
+ * perform image scan after standard installation
+ *
+ * @return void
+ */
+$plugins->add_hook('admin_config_plugins_activate_commit', 'pp_admin_config_plugins_activate_commit');
+function pp_admin_config_plugins_activate_commit() {
+	global $lang, $db;
+
+	$query = $db->simple_select('pp_images', 'id');
+	if ($db->num_rows($query) > 0) {
+		return;
+	}
+
+	if (!$lang->pp) {
+		$lang->load('pp');
+	}
+
+	ppInitiateImageScan($lang->pp_finalizing_installation);
+}
+
+	/** misc. functions **/
 
 /**
  * Output ACP tabs
@@ -2478,6 +2385,104 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 			}
 		}
 	}
+}
+
+/**
+ * perform image scan according to parameters
+ *
+ * @param  string
+ * @param  int
+ * @param  int
+ * @param  bool
+ * @param  bool
+ * @return void
+ */
+function ppInitiateImageScan($message, $fid=0, $tid=0, $newOnly=false, $deleteFirst=false)
+{
+	global $db;
+
+	$fid = (int) $fid;
+	$tid = (int) $tid;
+
+	$where = $queryExtra = '';
+	if ($tid) {
+		$queryExtra = "&tid={$tid}";
+		$where = "tid='{$tid}'";
+	} elseif($fid) {
+		$queryExtra = "&fid={$fid}";
+		$where = "fid='{$fid}'";
+	}
+
+	if ($deleteFirst) {
+		$db->delete_query('pp_images', $where);
+		$db->delete_query('pp_image_threads', $where);
+	} elseif ($newOnly) {
+		$query = $db->simple_select('pp_images', 'pid', $where, array('order_by' => 'pid', 'order_dir' => 'DESC', 'limit' => 1));
+
+		$lastPid = (int) $db->fetch_field($query, 'pid');
+		$where .= " AND pid > {$lastPid}";
+
+		$queryExtra .= "&lastpid={$lastPid}";
+	}
+
+	$query = $db->simple_select('posts', 'COUNT(pid) as resultCount', $where);
+	$count = (int) $db->fetch_field($query, 'resultCount');
+
+	flash_message($message, 'success');
+	admin_redirect("index.php?module=config-pp&action=scan&count={$count}{$queryExtra}");
+}
+
+/**
+ * merge new images into an existing task list
+ *
+ * @return void
+ */
+function ppAddImagesToTaskList()
+{
+	global $mybb, $db, $page, $lang, $html, $min;
+
+	$selected = $mybb->input['pp_inline_ids'];
+	$selectedCount = count($selected);
+
+	$tid = (int) $mybb->input['tid'];
+	$redirectUrl = $html->url(array('action' => 'view_thread', 'tid' => $tid, 'page' => $mybb->input['page']));
+
+	if (!is_array($selected) ||
+		empty($selected)) {
+		flash_message('no images', 'error');
+		admin_redirect($redirectUrl);
+	}
+
+	if (!$mybb->input['tasklist']) {
+		flash_message('bad task list', 'error');
+		admin_redirect($redirectUrl);
+	}
+
+	$taskList = new PicturePerfectImageTaskList($mybb->input['tasklist']);
+
+	if (!$taskList->isValid()) {
+		flash_message('invalid image task list', 'error');
+		admin_redirect($redirectUrl);
+	}
+
+	$currentImages = $taskList->get('images');
+	if (empty($currentImages)) {
+		$currentArray = array();
+	} else {
+		$currentArray = explode(',', $currentImages);
+	}
+
+	$mergedArray = array_merge($currentArray, array_keys($selected));
+	$mergedImages = implode(',', $mergedArray);
+	$taskList->set('images', $mergedImages);
+
+	if (!$taskList->save()) {
+		flash_message('could not save task list', 'error');
+		admin_redirect($redirectUrl);
+	}
+
+	flash_message('saved task list okay', 'success');
+	admin_redirect($redirectUrl);
 }
 
 /**

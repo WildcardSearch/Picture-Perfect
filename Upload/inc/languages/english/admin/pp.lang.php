@@ -35,7 +35,6 @@ $l['pp_installation_progress'] = 'Analyzing posts...<br />({1} of {2})';
 $l['pp_redirect_button_text'] = 'Automatically Redirecting...';
 
 // acp
-$l['pp_admin_main'] = 'Picture Perfect';
 $l['pp_admin_permissions_desc'] = 'Can use Picture Perfect?';
 $l['pp_admin_main_desc'] = 'view image threads';
 

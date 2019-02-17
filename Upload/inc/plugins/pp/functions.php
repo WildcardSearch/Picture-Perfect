@@ -371,6 +371,14 @@ function ppStripQuotes($message)
 	return preg_replace($find, '', $message);
 }
 
+/**
+ * replace the URL of any image MyCodes in the specified post
+ *
+ * @param  int
+ * @param  string
+ * @param  string
+ * @return bool success/fail
+ */
 function ppReplacePostImage($pid, $currentUrl, $newUrl)
 {
 	global $db;
@@ -394,6 +402,12 @@ function ppReplacePostImage($pid, $currentUrl, $newUrl)
 	return true;
 }
 
+/**
+ * remove any image MyCodes in the specified post completely
+ *
+ * @param  array image info
+ * @return bool success/fail
+ */
 function ppRemovePostedImage($image)
 {
 	global $db;
