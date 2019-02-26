@@ -57,7 +57,7 @@ class PicturePerfectModule extends InstallableModule010000
 	/**
 	 * @var string
 	 */
-	protected $installConstant = 'PP_IN_INSTALL';
+	protected $uninstallConstant = 'PP_IN_UNINSTALL';
 
 	/**
 	 * run the module parser routine

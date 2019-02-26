@@ -4,7 +4,7 @@
  * InstallableModule Class Structure
  */
 
-abstract class InstallableModule010000 extends ConfigurableModule010010 implements InstallableModuleInterface010000
+abstract class InstallableModule010000 extends ConfigurableModule010100 implements InstallableModuleInterface010000
 {
 	/**
 	 * @var array
@@ -49,7 +49,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 	/**
 	 * @var string
 	 */
-	protected $installConstant = '';
+	protected $uninstallConstant = '';
 
 	/**
 	 * attempt to load and validate the module
@@ -73,7 +73,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 		// newly updated module
 		} elseif ($currentVersion &&
 			version_compare($currentVersion, $this->version, '<') &&
-			(!$this->installConstant || !defined($this->installConstant) )) {
+			(!$this->uninstallConstant || !defined($this->uninstallConstant) )) {
 			$this->upgrade();
 		// pre-existing module
 		} else {
@@ -89,7 +89,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 	 *
 	 * @return bool
 	 */
-	public function loadCache()
+	protected function loadCache()
 	{
 		if (!$this->cacheKey) {
 			return false;
@@ -159,7 +159,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 	 *
 	 * @return string the return of the module routine
 	 */
-	public function upgrade()
+	protected function upgrade()
 	{
 		global $db;
 
@@ -199,7 +199,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 	 *
 	 * @return string the return of the module routine
 	 */
-	public function addTemplates()
+	protected function addTemplates()
 	{
 		global $db;
 
@@ -234,7 +234,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 	 *
 	 * @return string the return of the module routine
 	 */
-	public function addSettings()
+	protected function addSettings()
 	{
 		global $db;
 
@@ -280,7 +280,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 	 *
 	 * @return void
 	 */
-	public function removeTemplates()
+	protected function removeTemplates()
 	{
 		global $db;
 
@@ -300,7 +300,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 	 *
 	 * @return void
 	 */
-	public function removeSettings()
+	protected function removeSettings()
 	{
 		global $db;
 
@@ -336,7 +336,7 @@ abstract class InstallableModule010000 extends ConfigurableModule010010 implemen
 	 *
 	 * @return void
 	 */
-	public function setCacheVersion()
+	protected function setCacheVersion()
 	{
 		$cache = $this->cache->read($this->cacheKey);
 
