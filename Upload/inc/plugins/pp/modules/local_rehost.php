@@ -21,7 +21,7 @@ function pp_local_rehost_info()
 		'pageAction' => 'view_local_rehost',
 		'imageLimit' => 12,
 		'createsSet' => false,
-		'version' => '1.0',
+		'version' => '1.0.1',
 		'settings' => array(
 			'path' => array(
 				'title' => 'Path',
@@ -107,9 +107,6 @@ function pp_local_rehost_process_images($images, $settings)
 			continue;
 		}
 
-		$uniqueID = uniqid();
-		$baseName = "{$image['tid']}-{$image['pid']}-{$uniqueID}";
-
 		// if an extension isn't specified, keep the original
 		$ext = $image['extension'];
 		if ($settings['format']) {
@@ -121,6 +118,8 @@ function pp_local_rehost_process_images($images, $settings)
 		} elseif (!$ext) {
 			$ext = 'png';
 		}
+
+		$baseName = rcBuildRehostBaseName($path, $ext);
 
 		$filename = "{$path}/{$baseName}.{$ext}";
 
@@ -207,6 +206,26 @@ function pp_local_rehost_process_images($images, $settings)
 		'redirect' => $redirectInfo,
 		'messages' => $messages,
 	);
+}
+
+
+/**
+ * build a unique filename for an image that is at least 4 chars long
+ *
+ * @param  string
+ * @param  string
+ * @return array
+ */
+function rcBuildRehostBaseName($path, $ext='png')
+{
+	$goodChars = array_merge(range('a', 'z'), range('A', 'Z'), range('0', '9'));
+
+	$filename = '';
+	while (strlen($filename) < 4 || file_exists("{$path}/{$filename}.{$ext}")) {
+		$filename .= $goodChars[rand(0, count($goodChars) - 1)];
+	}
+
+	return $filename;
 }
 
 ?>
