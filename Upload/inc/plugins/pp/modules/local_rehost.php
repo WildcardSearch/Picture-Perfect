@@ -120,38 +120,43 @@ function pp_local_rehost_process_images($images, $settings)
 		}
 
 		$baseName = rcBuildRehostBaseName($path, $ext);
-
 		$filename = "{$path}/{$baseName}.{$ext}";
 
-		$image['image'] = @imagecreatefromstring($image['content']);
+		if ($settings['format'] &&
+			$settings['format'] != $ext) {
+			$image['image'] = @imagecreatefromstring($image['content']);
 
-		if (!$image['image'] ||
-			!is_resource($image['image'])) {
-			$fail++;
-			continue;
+			if (!$image['image'] ||
+				!is_resource($image['image'])) {
+				$fail++;
+				continue;
+			}
+
+			switch ($ext) {
+			case 'bmp':
+				@imagewbmp($image['image'], $filename);
+				break;
+			case 'gif':
+				@imagegif($image['image'], $filename);
+				break;
+			case 'jpg':
+				@imagejpeg($image['image'], $filename);
+				break;
+			case 'png':
+				@imagepng($image['image'], $filename);
+				break;
+			default:
+				$fail++;
+				continue;
+			}
+
+			// clean up
+			@imagedestroy($image['image']);
+		} else {
+			file_put_contents($filename, $image['content']);
 		}
 
-		switch ($ext) {
-		case 'bmp':
-			@imagewbmp($image['image'], $filename);
-			break;
-		case 'gif':
-			@imagegif($image['image'], $filename);
-			break;
-		case 'jpg':
-			@imagejpeg($image['image'], $filename);
-			break;
-		case 'png':
-			@imagepng($image['image'], $filename);
-			break;
-		default:
-			$fail++;
-			continue;
-		}
-
-		// clean up
 		@unlink($image['tmp_url']);
-		@imagedestroy($image['image']);
 
 		// now swap the image URL in the post
 		if ($domain == $mybb->settings['bburl']) {
