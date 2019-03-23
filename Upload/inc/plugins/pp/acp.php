@@ -40,7 +40,7 @@ function pp_admin()
 	}
 
 	// URL, link and image markup generator
-	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'addon', 'pp_inline_ids'));
+	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'pid', 'addon', 'pp_inline_ids'));
 
 	$modules = ppGetAllModules();
 
@@ -84,7 +84,17 @@ function pp_admin_forums()
 
 	// set up the page header
 	$page->extra_header .= <<<EOF
+<style>
+div.pp-forum-jump-form {
+	display: inline;
+	float: right;
+	padding-right: 16px;
+}
 
+div.pp-forum-jump-form input[type=text] {
+	width: 200px;
+}
+</style>
 EOF;
 
 	$page->output_header("{$lang->pp} &mdash; View Forums");
@@ -98,7 +108,19 @@ EOF;
 
 	ppBuildForumList($table, $fid);
 
-	$table->output('Forums');
+	$jumpForm = <<<EOF
+<div class="pp-forum-jump-form">
+	<form id="forum-jump">
+		<input type="hidden" name="module" value="config-pp" />
+		<input type="hidden" name="action" value="parse_url" />
+		<input type="hidden" name="from[action]" value="forums" />
+		<input type="text" name="url" value="" placeholder="Enter TID or link here..." />&nbsp;
+		<input type="submit" value="Go" />
+	</form>
+</div>
+EOF;
+
+	$table->output('Forums'.$jumpForm);
 
 	$page->output_footer();
 }
@@ -138,6 +160,17 @@ function pp_admin_view_threads()
 	// -->
 	</script>
 
+	<style>
+	div.pp-forum-jump-form {
+		display: inline;
+		float: right;
+		padding-right: 16px;
+	}
+
+	div.pp-forum-jump-form input[type=text] {
+		width: 200px;
+	}
+	</style>
 EOF;
 
 	$page->output_header("{$lang->pp} &mdash; {$forum['name']}");
@@ -238,7 +271,21 @@ EOF;
 		$table->construct_row();
 	}
 
-	$table->output($lang->pp_image_threads);
+	$jumpForm = <<<EOF
+<div class="pp-forum-jump-form">
+	<form id="forum-jump">
+		<input type="hidden" name="module" value="config-pp" />
+		<input type="hidden" name="action" value="parse_url" />
+		<input type="hidden" name="from[action]" value="view_threads" />
+		<input type="hidden" name="from[fid]" value="{$fid}" />
+		<input type="hidden" name="from[page]" value="{$mybb->input['page']}" />
+		<input type="text" name="url" value="" placeholder="Enter TID or link here..." />&nbsp;
+		<input type="submit" value="Go" />
+	</form>
+</div>
+EOF;
+
+	$table->output($lang->pp_image_threads.$jumpForm);
 	$form->end();
 	echo('<br />');
 
@@ -260,8 +307,27 @@ function pp_admin_view_thread()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
 
+	$perPage = 12;
 	$selected = $mybb->input['pp_inline_ids'];
 	$tid = (int) $mybb->input['tid'];
+	$pid = (int) $mybb->input['pid'];
+
+	if ($pid) {
+		if (!$tid) {
+			$post = get_post($pid);
+			$tid = (int) $post['tid'];
+		}
+
+		$query = $db->simple_select('pp_images', 'count(id) as count', "tid={$tid} AND setid=0 AND pid < '{$pid}'", [
+			'order_by' => 'pid',
+			'order_dir' => 'ASC',
+		]);
+
+		$count = $db->fetch_field($query, 'count');
+
+		$mybb->input['page'] = (int)($count / $perPage) + 1;
+	}
+
 	$titleQuery = $db->simple_select('threads', 'subject', "tid={$tid}");
 	$threadTitle = $db->fetch_field($titleQuery, 'subject');
 
@@ -298,6 +364,16 @@ function pp_admin_view_thread()
 	</script>
 
 	<style>
+div.pp-forum-jump-form {
+	display: inline;
+	float: right;
+	padding-right: 16px;
+}
+
+div.pp-forum-jump-form input[type=text] {
+	width: 200px;
+}
+
 div.imageContainer {
 	padding: 0px;
 	margin: 0px;
@@ -462,11 +538,24 @@ EOF;
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_thread}");
 	pp_output_tabs('pp_view_thread', $threadTitle, $tid);
 
+	echo <<<EOF
+<div class="pp-forum-jump-form">
+	<form id="forum-jump">
+		<input type="hidden" name="module" value="config-pp" />
+		<input type="hidden" name="action" value="parse_url" />
+		<input type="hidden" name="from[action]" value="view_thread" />
+		<input type="hidden" name="from[tid]" value="{$tid}" />
+		<input type="hidden" name="from[page]" value="{$mybb->input['page']}" />
+		<input type="text" name="url" value="" placeholder="Enter TID or link here..." />&nbsp;
+		<input type="submit" value="Go" />
+	</form>
+</div>
+EOF;
+
 	// get a total count on the items
 	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "tid={$tid} AND setid=0");
 	$resultCount = $db->fetch_field($query, 'resultCount');
 
-	$perPage = 12;
 	$totalPages = ceil($resultCount / $perPage);
 
 	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
@@ -545,10 +634,19 @@ EOF;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
 		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_thread', 'tid' => $tid)));
-		echo($pagination.'<br />');
+		echo($pagination);
+	} else {
+		echo('<br />');
 	}
 
-	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0", array('limit_start' => $start, 'limit' => $perPage));
+	echo('<br />');
+
+	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0", array(
+		'limit_start' => $start,
+		'limit' => $perPage,
+		'order_by' => 'pid',
+		'order_dir' => 'ASC'
+	));
 
 	$count = 0;
 	$images = array();
@@ -2106,6 +2204,163 @@ EOF;
 
 	$page->output_footer();
 	exit;
+}
+
+/**
+ * retrieve redirect info from URL
+ *
+ * @return void
+ */
+function pp_admin_parse_url()
+{
+	global $mybb, $db, $html;
+
+	$errorRedirect = $html->url($mybb->input['from']);
+
+	$url = trim($mybb->input['url']);
+	if ((int) $url <= 0 &&
+		my_strpos($url, $mybb->settings['bburl']) === false) {
+		flash_message('Invalid URL', 'error');
+		admin_redirect($errorRedirect);
+	}
+
+	$url = str_replace($mybb->settings['bburl'], '', $url);
+
+	while (my_strpos($url, '/') === 0) {
+		$url = my_substr($url, 1);
+	}
+
+	$tidPattern = "#^([\d]+)$#";
+	$standardPattern = "#showthread.php\?(pid|tid)=([\d]+)(?:.*?)(?:&pid=([\d]+))?#is";
+	$seoPattern = "#([thread|post])-([\d]+)(?:-page-[\d]+)?(?:-post-([\d]+))?(?:-[a-zA-Z]+)?#is";
+
+	$tid = $pid = 0;
+	if (preg_match($tidPattern, $url, $match)) {
+		$tid = (int) $match[1];
+	} elseif (preg_match($standardPattern, $url, $match)) {
+		$type = 'Standard';
+
+		if ($match[1] == 'tid') {
+			$tid = (int) $match[2];
+			if ((int) $match[3]) {
+				$pid = (int) $match[3];
+			}
+		} else {
+			$pid = (int) $match[2];
+
+			$post = get_post($pid);
+			$tid = $post['tid'];
+			$fid = $post['fid'];
+		}
+	} elseif (preg_match($seoPattern, $url, $match)) {
+		$type = 'Default SEO';
+
+		if ($match[1] == 'thread') {
+			$tid = (int) $match[2];
+		} else {
+			$pid = (int) $match[2];
+
+			$post = get_post($pid);
+			$tid = $post['tid'];
+			$fid = $post['fid'];
+		}
+	} elseif ($mybb->settings['google_seo_url_threads'] &&
+		$db->table_exists('google_seo')) {
+		$type = 'Google SEO';
+
+		$seoPrefix = str_replace('{url}', '', $mybb->settings['google_seo_url_threads']);
+
+		if (strpos($url, $seoPrefix) !== 0) {
+			flash_message('Invalid URL', 'error');
+			admin_redirect($errorRedirect);
+		}
+
+		$url = substr($url, strlen($seoPrefix));
+
+		$urlPieces = explode('?', $url);
+		if (count($urlPieces) > 1) {
+			list($url, $queryString) = $urlPieces;
+
+			if (my_strpos($queryString, '#') !== false) {
+				$queryStringPieces = explode('#', $urlPieces[1]);
+				$queryString = $queryStringPieces[0];
+			}
+
+			$queryStringPieces = explode('&', $queryString);
+			if (count($queryStringPieces) > 0) {
+				foreach ($queryStringPieces as $piece) {
+					$queryPieces = explode('=', $piece);
+					if (count($queryPieces) < 2) {
+						continue;
+					}
+
+					switch ($queryPieces[0]) {
+					case 'tid':
+						$tid = (int) $queryPieces[1];
+						break;
+					case 'pid':
+						$pid = (int) $queryPieces[1];
+						break;
+					}
+
+					if ($tid && $pid) {
+						break;
+					}
+				}
+
+				if ($pid && !$tid) {
+					$post = get_post($pid);
+					$tid = $post['tid'];
+				}
+			}
+		}
+
+		if ($url &&
+			!$tid) {
+			$url = $db->escape_string($url);
+
+			$query = $db->simple_select('google_seo', 'id', "idtype='4' AND url='{$url}'");
+
+			if ($db->num_rows($query) <= 0) {
+				flash_message('Invalid URL', 'error');
+				admin_redirect($errorRedirect);
+			}
+
+			$tid = $db->fetch_field($query, 'id');
+		}
+	}
+
+	if (!$tid) {
+		flash_message('Invalid URL', 'error');
+		admin_redirect($errorRedirect);
+	}
+
+	if (!$fid) {
+		$thread = get_thread($tid);
+		$fid = $thread['fid'];
+	}
+
+	$redirectArray = array('action' => 'view_thread', 'fid' => $fid, 'tid' => $tid);
+	$queryWhere = "tid='{$tid}' AND setid='0'";
+
+	$message = 'Redirected to thread...';
+	if ($pid) {
+		$message = 'Redirected to post...';
+		$redirectArray['pid'] = $pid;
+	}
+
+	$query = $db->simple_select('pp_images', 'count(id) as count', $queryWhere);
+	$count = $db->fetch_field($query, 'count');
+
+	if ($count <= 0) {
+		flash_message('No images in thread #'.$tid.' Post #'.$pid, 'error');
+		admin_redirect($errorRedirect);
+	}
+
+	$redirectUrl = $html->url($redirectArray);
+
+	flash_message($message, 'success');
+	admin_redirect($redirectUrl);
 }
 
 	/** hook functions **/
