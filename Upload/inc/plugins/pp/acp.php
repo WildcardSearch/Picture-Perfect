@@ -1489,7 +1489,7 @@ function pp_admin_edit_image_task()
 
 	$formContainer->output_row('Title', '', $form->generate_text_box('title', $data['title']));
 	$formContainer->output_row('Description', '', $form->generate_text_box('description', $data['description']));
-	$formContainer->output_row('Module', '', $form->generate_select_box('addon', $options));
+	$formContainer->output_row('Module', '', $form->generate_select_box('addon', $options, $data['addon']));
 	$formContainer->output_row('Image Set', '', $form->generate_select_box('setid', $sets, $data['setid']));
 	$formContainer->output_row('Order', '', $form->generate_text_box('task_order', $data['task_order']).$form->generate_hidden_field('id', $id).$form->generate_hidden_field('pid', 0));
 
