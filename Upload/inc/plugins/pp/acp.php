@@ -363,7 +363,7 @@ function pp_admin_view_thread()
 	// -->
 	</script>
 
-	<style>
+<style>
 div.pp-forum-jump-form {
 	display: inline;
 	float: right;
@@ -461,6 +461,10 @@ div.buttonRow {
 	padding-left: 85px;
 }
 
+div.image-popup {
+	z-index: 100;
+}
+
 div.imageLinks {
 	font-size: .95em;
 }
@@ -550,7 +554,7 @@ span.inlineSubmit {
   -ms-transform: rotate(45deg);
   transform: rotate(45deg);
 }
-	</style>
+</style>
 
 EOF;
 
@@ -716,6 +720,9 @@ EOF;
 
 		$popup->add_item('Delete', '');
 
+		// add z-index to popup (hacky, I know)
+		$thisPopup = str_replace(' class="popup_menu', ' class="popup_menu image-popup', $popup->fetch());
+
 		$checkId = "imageCheck_{$id}";
 
 		$imageElement = <<<EOF
@@ -738,7 +745,7 @@ EOF;
 			<input class="captionInput" type="text" name="image_caption[{$id}]" value="" placeholder="Your caption here..."/>
 		</div>
 		<div class="buttonRow">
-			{$popup->fetch()}
+			{$thisPopup}
 		</div>
 	</div>
 </div>
