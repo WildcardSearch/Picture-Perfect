@@ -34,7 +34,6 @@ function task_pp_image_tasks($task)
 		$taskList = $db->fetch_array($query);
 
 		$imageList = $taskList['images'];
-		$destination = $taskList['destination'];
 		$lid = (int) $taskList['id'];
 
 		$query = $db->simple_select('pp_image_tasks', '*', "lid='{$lid}'", array('order_by' => 'task_order', 'order_dir' => 'ASC'));
@@ -92,7 +91,6 @@ function task_pp_image_tasks($task)
 			'tasks' => $tasks,
 			'limit' => $imageLimit,
 			'images' => $images,
-			'destination' => $destination,
 		);
 
 		foreach ($imageArray as $imageId) {

@@ -1681,7 +1681,6 @@ EOF;
 		$table->construct_cell($editLink);
 		$table->construct_cell($taskList['description']);
 		$table->construct_cell($imageCount);
-		$table->construct_cell($taskList['destination']);
 		$table->construct_cell($taskListStatus);
 		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('class' => 'pp_check')));
 
@@ -1792,8 +1791,7 @@ function pp_admin_edit_image_task_list()
 	$formContainer->output_row('Title', '', $form->generate_text_box('title', $data['title']));
 	$formContainer->output_row('Description', '', $form->generate_text_box('description', $data['description']));
 	$formContainer->output_row('Task(s)', '', $form->generate_select_box('tasks[]', $options, $selected, array('multiple' => true)));
-	$formContainer->output_row('Destination Path', '', $form->generate_text_box('destination', $data['destination']).$form->generate_hidden_field('id', $id));
-	$formContainer->output_row('Active?', '', $form->generate_yes_no_radio('active', $data['active']));
+	$formContainer->output_row('Active?', '', $form->generate_yes_no_radio('active', $data['active']).$form->generate_hidden_field('id', $id));
 
 	$formContainer->end();
 	$buttons[] = $form->generate_submit_button('Save Image Task List', array('name' => 'edit_image_task_list_submit'));
