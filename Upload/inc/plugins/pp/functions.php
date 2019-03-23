@@ -506,6 +506,15 @@ function ppRemovePostedImage($image)
 
 	$db->update_query('posts', array('message' => $db->escape_string($message)), "pid='{$pid}'");
 
+	$threadQuery = $db->simple_select('pp_image_threads', 'image_count', "tid='{$tid}'");
+	$imageCount = (int) $db->fetch_field($query, 'image_count') - 1;
+
+	if ($imageCount < 0) {
+		$imageCount = 0;
+	}
+
+	$db->update_query('pp_image_threads', array('image_count' => $imageCount), "tid='{$tid}'");
+
 	return strpos($image['url'], $message) === false;
 }
 
