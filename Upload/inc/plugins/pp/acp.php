@@ -417,6 +417,25 @@ div.thumbnail.localImage {
 	border-color: #32cd32;
 }
 
+div.domain-label {
+	background: rgba(255,255,255,0.5);
+
+	width: 100%;
+	height: 26px;
+	overflow: hidden;
+	text-align: center;
+	top: 124px;
+	position: relative;
+
+	text-shadow:
+		-1px -1px 0 white,
+		1px -1px 0 white,
+		-1px 1px 0 white,
+		1px 1px 0 white;
+
+	border-radius: 0px 0px 0px 2px;
+}
+
 div.imageInfo {
 	padding: 3px 0px 3px 0px;
 
@@ -672,6 +691,23 @@ EOF;
 
 		$imageLink = $html->link($image['url'], 'Image Link', array('target' => '_blank'));
 
+		$urlInfo = parse_url($image['url']);
+
+		$basePiece = $urlInfo['host'];
+		$trimmed = ppGetBaseDomain($urlInfo['host']);
+		if ($trimmed) {
+			$basePiece = $trimmed;
+		}
+
+		$domainTitle = htmlspecialchars_uni($basePiece);
+
+		$domainLength = my_strlen($basePiece);
+		$fs = 1;
+		if ($domainLength > 10) {
+			$fs = (float) ($domainLength - 10) * 0.03;
+			$fs = 1 - ($fs);
+		}
+
 		$popup = new PopupMenu("control_{$id}", 'Options');
 
 		foreach ((array) $modules as $addon => $module) {
@@ -688,6 +724,7 @@ EOF;
 		<div class="thumbnail{$imageClass}" style="background-image: url({$image['url']}), url(styles/{$cp_style}/images/pp/bad-image.png);">
 			<input id="{$checkId}" type="checkbox" name="pp_inline_ids[{$id}]" value="" class="checkbox_input pp_check" />
 			<span class="checkmark"></span>
+			<div class="domain-label" title="{$domainTitle}" style="font-size: {$fs}em;">{$basePiece}</div>
 		</div>
 	</label>
 	<div class="imageInfo">
