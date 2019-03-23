@@ -67,20 +67,32 @@ function pp_imgur_rehost_process_images($images, $settings)
 
 	// main loop - process the images
 	$fail = $success = 0;
+	$imgurRateLimitReached = false;
 	foreach ($images as $id => $image) {
 		// already on Imgur?
-		if (strpos($image['url'], 'https://i.imgur.com') !== false) {
+		if (strpos($image['url'], 'https://i.imgur.com') !== false ||
+			strpos($image['url'], 'http://i.imgur.com') !== false) {
 			$fail++;
 			$alreadyRehosted++;
 			continue;
 		}
 
 		// attempt Imgur upload
-		$url = ppImgurRehost($image['url'], $settings);
-		if (!$url) {
+		$info = ppImgurRehost($image['url'], $settings);
+
+		if (!$info['link'] ||
+			!empty($info['error'])) {
+			if ($info['error']['code'] == 429) {
+				$imgurRateLimitReached = false;
+				$imagurTooFastMessage = $info['error']['message'];
+				break;
+			}
+
 			$fail++;
 			continue;
 		}
+
+		$url = $info['link'];
 
 		// now replace the image URL in the post
 		if (!ppReplacePostImage($image['pid'], $image['url'], $url)) {
@@ -124,6 +136,13 @@ function pp_imgur_rehost_process_images($images, $settings)
 				'message' => $lang->sprintf('{1} image(s) could not be rehosted to Imgur successfully', $fail),
 			);
 		}
+	}
+
+	if ($imgurRateLimitReached) {
+		$messages[] = array(
+			'status' => 'success',
+			'message' => "Additional Imgur Error Message: &quot;{$imagurTooFastMessage}&quot;",
+		);
 	}
 
 	return array(
@@ -175,7 +194,7 @@ function ppImgurRehost($url, $settings)
 		!$json['data']['link']) {
 		return false;
 	} else {
-		return $json['data']['link'];
+		return $json['data'];
 	}
 }
 

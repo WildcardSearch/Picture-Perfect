@@ -21,7 +21,7 @@ function pp_replace_info()
 		'description' => 'replace or remove a posted image',
 		'actionPhrase' => 'Replace/Remove Images',
 		'pageAction' => 'view_replace',
-		'imageLimit' => 1,
+		'imageLimit' => 12,
 		'createsSet' => false,
 		'version' => '1.0',
 		'settings' => array(
