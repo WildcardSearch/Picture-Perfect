@@ -318,10 +318,10 @@ function pp_admin_view_thread()
 			$tid = (int) $post['tid'];
 		}
 
-		$query = $db->simple_select('pp_images', 'count(id) as count', "tid={$tid} AND setid=0 AND pid < '{$pid}'", [
+		$query = $db->simple_select('pp_images', 'count(id) as count', "tid={$tid} AND setid=0 AND pid < '{$pid}'", array(
 			'order_by' => 'pid',
-			'order_dir' => 'ASC',
-		]);
+			'order_dir' => 'ASC, id ASC',
+		));
 
 		$count = $db->fetch_field($query, 'count');
 
@@ -668,7 +668,7 @@ EOF;
 		'limit_start' => $start,
 		'limit' => $perPage,
 		'order_by' => 'pid',
-		'order_dir' => 'ASC'
+		'order_dir' => 'ASC, id ASC'
 	));
 
 	$count = 0;

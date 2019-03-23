@@ -26,10 +26,22 @@ function pp_replace_info()
 		'version' => '1.0',
 		'settings' => array(
 			'url' => array(
-				'title' => 'Replacement URL',
-				'description' => 'the URL of the image to use instead of the currently posted image',
+				'title' => 'Replacement Content',
+				'description' => 'the URL or text replacement to use instead of the currently posted image',
 				'optionscode' => 'text',
 				'value' => '',
+			),
+			'text_replacement' => array(
+				'title' => 'Replacement With Text',
+				'description' => 'YES to replace the entire MyCode with the supplied text (above), NO (default) to replace the image URL in the post<br />Replacement text may contain BB Code.',
+				'optionscode' => 'yesno',
+				'value' => '0',
+			),
+			'replace_all' => array(
+				'title' => 'Replacement All',
+				'description' => 'YES to replace any other images in the post with the same URL, NO (default) to only replace the selected image',
+				'optionscode' => 'yesno',
+				'value' => '0',
 			),
 		),
 	);
@@ -59,41 +71,38 @@ function pp_replace_process_images($images, $settings)
 
 	$url = trim($settings['url']);
 
-	if ($url) {
-		// replace the image URL in the post
-		if (ppReplacePostImage($image['pid'], $image['url'], $url)) {
-			$messages[] = array(
-				'status' => 'success',
-				'message' => 'Image replaced successfully',
-			);
+	$action = 'replaced';
+	if (!$url) {
+		$action = 'removed';
+	}
 
+	$thing = 'Image URL';
+	if ($settings['text_replacement'] || $action == 'removed') {
+		$thing = 'Image';
+	}
+
+	// replace the image URL in the post
+	if (ppReplacePostedImage($image, $url, $settings['text_replacement'], $settings['replace_all'])) {
+		$messages[] = array(
+			'status' => 'success',
+			'message' => "{$thing} {$action} successfully",
+		);
+
+		if ($action == 'replaced' && !$settings['replace_all'] && !$settings['text_replacement']) {
 			// update the image
 			$image['url'] = $url;
 			$newImage = new PicturePerfectImage($image);
 			$newImage->save();
-		} else {
-			$messages[] = array(
-				'status' => 'error',
-				'message' => 'Image URL could not be replaced',
-			);
-		}
-	} else {
-		// remove the image from the post
-		if (ppRemovePostedImage($image)) {
-			$messages[] = array(
-				'status' => 'success',
-				'message' => 'Image successfully removed from the forum',
-			);
-
+		} elseif (!$settings['replace_all']) {
 			// update the image
 			$newImage = new PicturePerfectImage($image);
 			$newImage->remove();
-		} else {
-			$messages[] = array(
-				'status' => 'error',
-				'message' => 'Image could not be removed from the forum successfully',
-			);
 		}
+	} else {
+		$messages[] = array(
+			'status' => 'error',
+			'message' => "{$thing} could not be {$action}",
+		);
 	}
 
 	return array(

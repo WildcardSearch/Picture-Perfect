@@ -449,41 +449,31 @@ function ppStripQuotes($message)
  * @param  string
  * @return bool success/fail
  */
-function ppReplacePostImage($pid, $currentUrl, $newUrl)
-{
-	global $db;
-
-	$pid = (int) $pid;
-	if (!$pid) {
-		return false;
-	}
-
-	$query = $db->simple_select('posts', 'message', "pid='{$pid}'");
-	if ($db->num_rows($query) <= 0) {
-		return false;
-	}
-
-	$message = $db->fetch_field($query, 'message');
-
-	$message = str_replace($currentUrl, $newUrl, $message);
-
-	$db->update_query('posts', array('message' => $db->escape_string($message)), "pid='{$pid}'");
-
-	return true;
-}
-
-/**
- * remove any image MyCodes in the specified post completely
- *
- * @param  array image info
- * @return bool success/fail
- */
-function ppRemovePostedImage($image)
+function ppReplacePostedImage($image, $replacement, $textReplacement=false, $replaceAll=false)
 {
 	global $db;
 
 	$pid = (int) $image['pid'];
-	if (!$pid) {
+	$url = trim($image['url']);
+	if (!$pid || !$url) {
+		return false;
+	}
+
+	$originalReplacement = $replacement;
+
+	if (!$textReplacement && $replacement) {
+		$replacement = "[img]{$replacement}[/img]";
+	}
+
+	$url = $db->escape_string($url);
+
+	$imageQuery = $db->simple_select('pp_images', '*', "pid='{$pid}' AND url='{$url}'", array(
+		'order_by' => 'id',
+		'oder_dir' => 'ASC',
+	));
+
+	$iCount = $db->num_rows($imageQuery);
+	if ($iCount == 0) {
 		return false;
 	}
 
@@ -496,26 +486,75 @@ function ppRemovePostedImage($image)
 
 	$images = ppGetPostImages($message, true);
 
+	$x = 1;
+	$existingImages = array();
+	while ($i = $db->fetch_array($imageQuery)) {
+		$existingImages[$i['id']] = $i;
+		if ($i['id'] == $image['id']) {
+			$position = $x;
+		}
+
+		$x++;
+	}
+
+	$foundCount = 0;
+	$newMessage = '';
+	$thisMessage = $message;
 	foreach($images as $fullCode) {
-		if (strpos($fullCode, $image['url']) === false) {
+		$pos = my_strpos($thisMessage, $fullCode);
+		if ($pos === false) {
+			return false;
+		}
+
+		if (my_strpos($fullCode, $image['url']) === false) {
 			continue;
 		}
 
-		$message = str_replace($fullCode, '', $message);
+		$foundCount++;
+
+		if ($foundCount === $position || $replaceAll) {
+			if ($pos > 0) {
+				$newMessage .= substr($thisMessage, 0, $pos).$replacement;
+			} else {
+				$newMessage .= $replacement;
+			}
+
+			$thisMessage = substr($thisMessage, $pos+my_strlen($fullCode));
+
+			if (!$replaceAll) {
+				break;
+			}
+		} else {
+			if ($pos > 0) {
+				$newMessage .= substr($thisMessage, 0, $pos).$fullCode;
+			} else {
+				$newMessage .= $fullCode;
+			}
+
+			$thisMessage = substr($thisMessage, $pos+my_strlen($fullCode));
+		}
 	}
 
-	$db->update_query('posts', array('message' => $db->escape_string($message)), "pid='{$pid}'");
-
-	$threadQuery = $db->simple_select('pp_image_threads', 'image_count', "tid='{$tid}'");
-	$imageCount = (int) $db->fetch_field($query, 'image_count') - 1;
-
-	if ($imageCount < 0) {
-		$imageCount = 0;
+	if ($thisMessage) {
+		$newMessage .= $thisMessage;
 	}
 
-	$db->update_query('pp_image_threads', array('image_count' => $imageCount), "tid='{$tid}'");
+	$db->update_query('posts', array('message' => $db->escape_string($newMessage)), "pid='{$pid}'");
 
-	return strpos($image['url'], $message) === false;
+	if ($replaceAll) {
+		foreach ($existingImages as $id => $data) {
+			$i = new PicturePerfectImage($data);
+
+			if (!$originalReplacement || $textReplacement) {
+				$i->remove();
+			} else {
+				$i->set('url', $originalReplacement);
+				$i->save();
+			}
+		}
+	}
+
+	return true;
 }
 
 /**
