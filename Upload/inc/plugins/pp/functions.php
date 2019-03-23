@@ -185,7 +185,7 @@ function ppFetchRemoteFiles($files)
  * @param string new file name
  * @param int
  * @param int
- * @param int
+ * @param bool
  *
  * returns true upon success and false on failure.
  */
@@ -221,12 +221,20 @@ function ppResizeImage($source, $destination, $width, $height, $crop=false)
 		$h = $height / $ratio;
 		$x = ($w - $width / $ratio) / 2;
 		$w = $width / $ratio;
-	} elseif (	$w > $width ||
-				$h > $height) {
+	} elseif ($w > $width || $h > $height) {
 		$ratio = min($width / $w, $height / $h);
 		$width = $w * $ratio;
 		$height = $h * $ratio;
 		$x = 0;
+	}
+
+	if ($type == 'gif' &&
+		ppIsAnimatedGif($source)) {
+		if (class_exists('Imagick')) {
+			return ppResizeAnimatedGif($source, $destination, $width, $height);
+		}
+
+		return false;
 	}
 
 	$new = @imagecreatetruecolor($width, $height);
@@ -255,6 +263,68 @@ function ppResizeImage($source, $destination, $width, $height, $crop=false)
 		break;
 	}
 	return true;
+}
+
+/**
+ * resize an animated GIF
+ *
+ * @param string file name
+ * @param string new file name
+ * @param int
+ * @param int
+ *
+ * returns true upon success and false on failure.
+ */
+function ppResizeAnimatedGif($source, $destination, $width, $height)
+{
+	$imagick = new Imagick($source);
+
+	$format = $imagick->getImageFormat();
+	if ($format != 'GIF') {
+		return false;
+	}
+
+	$imagick = $imagick->coalesceImages();
+
+	do {
+		$imagick->resizeImage($width, $height, Imagick::FILTER_BOX, 1);
+	} while ($imagick->nextImage());
+
+	$imagick = $imagick->deconstructImages();
+	$imagick->writeImages($destination, true);
+
+	$imagick->clear();
+	$imagick->destroy();
+
+	return true;
+}
+
+/**
+ * detect animated GIF image
+ *
+ * from https://github.com/Sybio/GifFrameExtractor by Clément Guillemain
+ *
+ * @param  string
+ * @return bool
+ */
+function ppIsAnimatedGif($filename)
+{
+	if (!($fh = @fopen($filename, 'rb'))) {
+		return false;
+	}
+	
+	$count = 0;
+
+	while (!feof($fh) && $count < 2) {
+		// read 100kb at a time
+		$chunk = fread($fh, 1024 * 100);
+
+		// matches any image data blocks
+		$count += preg_match_all('#\x00\x21\xF9\x04.{4}\x00(\x2C|\x21)#s', $chunk, $matches);
+	}
+	
+	fclose($fh);
+	return $count > 1;
 }
 
 /**
