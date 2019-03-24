@@ -611,16 +611,16 @@ EOF;
 		'order_dir' => 'ASC',
 	));
 
-	if ($db->num_rows($taskQuery)) {
-		$options = '';
-		while ($task = $db->fetch_array($taskQuery)) {
-			$options .= <<<EOF
 
-		<option value="{$task['id']}">{$task['title']}</option>
+	$options = '';
+	while ($task = $db->fetch_array($taskQuery)) {
+		$options .= <<<EOF
+
+	<option value="{$task['id']}">{$task['title']}</option>
 EOF;
-		}
+	}
 
-		$taskSelect = <<<EOF
+	$taskSelect = <<<EOF
 <span class="inlineSubmit">
 	<strong>Process Images:</strong>&nbsp;
 	<select name="task">{$options}
@@ -630,7 +630,6 @@ EOF;
 	<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
 </span>
 EOF;
-	}
 
 	$taskOptions = '';
 	$query = $db->simple_select('pp_image_task_lists', '*', 'active=1');
