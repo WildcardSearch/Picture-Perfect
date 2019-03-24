@@ -110,13 +110,21 @@ $settings = array(
 			'isdefault' => 0,
 		),
 		'settings' => array(
+			'pp_images_per_row' => array(
+				'name' => 'pp_images_per_row',
+				'title' => 'Images Per Row',
+				'description' => 'In View Thread ACP page, enter the number of images per row. eg. 3 (default)',
+				'optionscode' => 'text',
+				'value' => '3',
+				'disporder' => '10',
+			),
 			'pp_minify_js' => array(
 				'name' => 'pp_minify_js',
 				'title' => $lang->pp_minify_js_title,
 				'description' => $lang->pp_minify_js_desc,
 				'optionscode' => 'yesno',
 				'value' => '0',
-				'disporder' => '50'
+				'disporder' => '20',
 			),
 		),
 	),

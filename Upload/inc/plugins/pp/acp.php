@@ -661,6 +661,9 @@ EOF;
 	 * @todo create setting for images per row
 	 */
 	$ipr = 3;
+	if ($mybb->settings['pp_images_per_row']) {
+		$ipr = (int) $mybb->settings['pp_images_per_row'];
+	}
 
 	$table = new Table;
 	$table->construct_header($taskSelect.$taskListSelect.$selectAllCheck, array('width' => '20%', 'colspan' => $ipr));
