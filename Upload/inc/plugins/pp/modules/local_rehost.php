@@ -119,7 +119,7 @@ function pp_local_rehost_process_images($images, $settings)
 			$ext = 'png';
 		}
 
-		$baseName = rcBuildRehostBaseName($path, $ext);
+		$baseName = ppBuildRehostBaseName($path, $ext);
 		$filename = "{$path}/{$baseName}.{$ext}";
 
 		if ($settings['format'] &&
@@ -221,7 +221,7 @@ function pp_local_rehost_process_images($images, $settings)
  * @param  string
  * @return array
  */
-function rcBuildRehostBaseName($path, $ext='png')
+function ppBuildRehostBaseName($path, $ext='png')
 {
 	$goodChars = array_merge(range('a', 'z'), range('A', 'Z'), range('0', '9'));
 
