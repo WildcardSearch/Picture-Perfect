@@ -312,7 +312,7 @@ function ppIsAnimatedGif($filename)
 	if (!($fh = @fopen($filename, 'rb'))) {
 		return false;
 	}
-	
+
 	$count = 0;
 
 	while (!feof($fh) && $count < 2) {
@@ -322,7 +322,7 @@ function ppIsAnimatedGif($filename)
 		// matches any image data blocks
 		$count += preg_match_all('#\x00\x21\xF9\x04.{4}\x00(\x2C|\x21)#s', $chunk, $matches);
 	}
-	
+
 	fclose($fh);
 	return $count > 1;
 }
@@ -456,7 +456,10 @@ function ppReplacePostedImage($image, $replacement, $textReplacement=false, $rep
 	$pid = (int) $image['pid'];
 	$url = trim($image['url']);
 	if (!$pid || !$url) {
-		return false;
+		return array(
+			'status' => false,
+			'message' => 'Invalid info passed',
+		);
 	}
 
 	$originalReplacement = $replacement;
@@ -474,12 +477,18 @@ function ppReplacePostedImage($image, $replacement, $textReplacement=false, $rep
 
 	$iCount = $db->num_rows($imageQuery);
 	if ($iCount == 0) {
-		return false;
+		return array(
+			'status' => false,
+			'message' => "No images exist for the specified post. ({$pid})",
+		);
 	}
 
 	$query = $db->simple_select('posts', 'message', "pid='{$pid}'");
 	if ($db->num_rows($query) <= 0) {
-		return false;
+		return array(
+			'status' => false,
+			'message' => "The specified post ({$pid}) does not exist.",
+		);
 	}
 
 	$message = $db->fetch_field($query, 'message');
@@ -503,7 +512,10 @@ function ppReplacePostedImage($image, $replacement, $textReplacement=false, $rep
 	foreach($images as $fullCode) {
 		$pos = my_strpos($thisMessage, $fullCode);
 		if ($pos === false) {
-			return false;
+			return array(
+				'status' => false,
+				'message' => "The specified post ({$pid}) does not contain the passed URL. ({$url})",
+			);
 		}
 
 		if (my_strpos($fullCode, $image['url']) === false) {
@@ -541,6 +553,7 @@ function ppReplacePostedImage($image, $replacement, $textReplacement=false, $rep
 
 	$db->update_query('posts', array('message' => $db->escape_string($newMessage)), "pid='{$pid}'");
 
+	$affected = array();
 	if ($replaceAll) {
 		foreach ($existingImages as $id => $data) {
 			$i = new PicturePerfectImage($data);
@@ -551,10 +564,17 @@ function ppReplacePostedImage($image, $replacement, $textReplacement=false, $rep
 				$i->set('url', $originalReplacement);
 				$i->save();
 			}
+
+			if (!in_array($id, $affected)) {
+				$affected[] = $id;
+			}
 		}
 	}
 
-	return true;
+	return array(
+		'status' => true,
+		'affected' => $affected,
+	);
 }
 
 /**

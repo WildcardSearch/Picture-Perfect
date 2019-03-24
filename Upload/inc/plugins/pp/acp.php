@@ -780,7 +780,7 @@ EOF;
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("pp_inline_ids[{$id}]", 1);
 	}
-	echo $form->generate_hidden_field('tid', $tid);
+	echo $form->generate_hidden_field('tid', $tid).$form->generate_hidden_field('fid', $fid);
 
 	$form->end();
 	echo('<br />');
