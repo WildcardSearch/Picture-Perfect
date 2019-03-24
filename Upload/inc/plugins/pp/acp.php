@@ -604,7 +604,7 @@ EOF;
 		while ($task = $db->fetch_array($taskQuery)) {
 			$options .= <<<EOF
 
-			<option value="{$task['id']}">{$task['title']}</option>
+		<option value="{$task['id']}">{$task['title']}</option>
 EOF;
 		}
 
@@ -612,6 +612,7 @@ EOF;
 <span class="inlineSubmit">
 	<strong>Process Images:</strong>&nbsp;
 	<select name="task">{$options}
+		<option value="caption">Update Captions</option>
 	</select>
 	<input type="submit" class="pp_inline_submit button" name="pp_inline_task" value="{$lang->go} ({$selectedCount})"/>
 	<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
@@ -718,7 +719,13 @@ EOF;
 			$popup->add_item($module->get('actionPhrase'), $html->url(array('action' => 'process_images', 'mode' => 'configure', 'addon' => $addon, 'pp_inline_ids' => array($id))));
 		}
 
-		$popup->add_item('Delete', '');
+		$popup->add_item('Update Caption', $html->url(array(
+			'action' => 'update_caption',
+			'id' => $id,
+			'tid' => $tid,
+			'fid' => $fid,
+			'page' => $mybb->input['page'],
+		)));
 
 		// add z-index to popup (hacky, I know)
 		$thisPopup = str_replace(' class="popup_menu', ' class="popup_menu image-popup', $popup->fetch());
@@ -742,7 +749,7 @@ EOF;
 			<span>Width: 0px | Height: 0px;</span>
 		</div>
 		<div class="infoRow captionRow">
-			<input class="captionInput" type="text" name="image_caption[{$id}]" value="" placeholder="Your caption here..."/>
+			<input class="captionInput" type="text" name="image_captions[{$id}]" value="{$image['caption']}" placeholder="Your caption here..." title="{$image['caption']}" />
 		</div>
 		<div class="buttonRow">
 			{$thisPopup}
@@ -780,7 +787,7 @@ EOF;
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("pp_inline_ids[{$id}]", 1);
 	}
-	echo $form->generate_hidden_field('tid', $tid).$form->generate_hidden_field('fid', $fid);
+	echo $form->generate_hidden_field('tid', $tid).$form->generate_hidden_field('fid', $fid).$form->generate_hidden_field('page', $mybb->input['page']);
 
 	$form->end();
 	echo('<br />');
@@ -1914,8 +1921,50 @@ function pp_admin_process_images()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
 
+	$redirectUrl = $html->url(array(
+		'action' => 'view_thread',
+		'tid' => $mybb->input['tid'],
+		'fid' => $mybb->input['fid'],
+		'page' => $mybb->input['page'],
+	));
+
 	if (isset($mybb->input['pp_task_submit'])) {
 		ppAddImagesToTaskList();
+	} elseif ($mybb->input['task'] == 'caption') {
+		if (empty($mybb->input['pp_inline_ids'])) {
+			flash_message('No selected images', 'error');
+			admin_redirect($redirectUrl);
+		}
+
+		$success = $fail = 0;
+		foreach ($mybb->input['pp_inline_ids'] as $id => $throwAway) {
+			$i = new PicturePerfectImage($id);
+			if (!$i->isValid()) {
+				$fail++;
+			} else {
+				$i->set('caption', $mybb->input['image_captions'][$id]);
+				if (!$i->save()) {
+					$fail++;
+				} else {
+					$success++;
+				}
+			}
+		}
+
+		$status = 'success';
+		$message = "{$success} caption(s) updated";
+		if ($fail) {
+			if ($success) {
+				$message .= "; {$fail} caption(s) failed.";
+				$status = '';
+			} else {
+				$message = "{$fail} caption(s) failed.";
+				$status = 'error';
+			}
+		}
+
+		flash_message($message, $status);
+		admin_redirect($redirectUrl);
 	}
 
 	$doTask = false;
@@ -2405,6 +2454,81 @@ function pp_admin_parse_url()
 	admin_redirect($redirectUrl);
 }
 
+/**
+ * update a single images caption
+ *
+ * @return void
+ */
+function pp_admin_update_caption()
+{
+	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
+
+	$id = (int) $mybb->input['id'];
+
+	if (!$id) {
+		flash_message('No Image ID', 'error');
+		admin_redirect($html->url($redirectUrl));
+	}
+
+	$image = new PicturePerfectImage($id);
+	if (!$image->isValid()) {
+		flash_message('Invalid Image ID', 'error');
+		admin_redirect($html->url());
+	}
+
+	$data = $image->get('data');
+	$tid = (int) $data['tid'];
+	$fid = (int) $data['fid'];
+	$mybb->input['page'] = (int) $mybb->input['page'] ? (int) $mybb->input['page'] : 1;
+
+	$redirectUrl = array(
+		'action' => 'view_thread',
+		'tid' => $tid,
+		'fid' => $fid,
+		'page' => $mybb->input['page'],
+	);
+
+	if ($mybb->request_method == 'post') {
+		$caption = trim($mybb->input['caption']);
+
+		if (!$caption) {
+			$redirectUrl['action'] = 'update_caption';
+
+			flash_message('No caption provided.', 'error');
+			admin_redirect($html->url($redirectUrl));
+		}
+
+		$image->set('caption', $caption);
+		if (!$image->save()) {
+			flash_message('Caption could not be updated.', 'error');
+			admin_redirect($html->url($redirectUrl));
+		}
+
+		flash_message('Caption updated successfully.', 'success');
+		admin_redirect($html->url($redirectUrl));
+	}
+
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item('Update Image Caption', $html->url(array('action' => 'update_caption')));
+	$page->add_breadcrumb_item("Update Image Caption (#{$id})");
+
+	$page->output_header("{$lang->pp} - Update Image Caption");
+	pp_output_tabs('pp_update_caption');
+
+	$form = new Form($html->url(array('action' => 'update_caption')), 'post');
+
+	$formContainer = new FormContainer('Update Image Caption');
+
+	$formContainer->output_row('Caption', 'enter a caption here', $form->generate_text_box('caption', $data['caption']).$form->generate_hidden_field('action', 'update_caption').$form->generate_hidden_field('id', $id).$form->generate_hidden_field('tid', $tid).$form->generate_hidden_field('fid', $fid).$form->generate_hidden_field('page', $mybb->input['page']));
+
+	$formContainer->end();
+	$buttons[] = $form->generate_submit_button('Submit');
+	$form->output_submit_wrapper($buttons);
+	$form->end();
+
+	$page->output_footer();
+}
+
 	/** hook functions **/
 
 /**
@@ -2575,6 +2699,15 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 			'title' => 'Confirm Image Overwrite',
 			'link' => $html->url($urlArray),
 			'description' => 'The thread or forum being scanned already has existing images. You are being asked to confirm whether to delete the existing images and rescan, or to only look for new images.',
+		);
+		break;
+	case 'pp_update_caption':
+		$urlArray = array('action' => 'update_caption', 'id' => $mybb->input['id']);
+
+		$subTabs['pp_update_caption'] = array(
+			'title' => 'Update Image Caption',
+			'link' => $html->url($urlArray),
+			'description' => 'edit caption for posted images',
 		);
 		break;
 	}
