@@ -4,7 +4,7 @@
  * InstallableModule Class Structure
  */
 
-abstract class InstallableModule010000 extends ConfigurableModule010100 implements InstallableModuleInterface010000
+abstract class InstallableModule010001 extends ConfigurableModule010101 implements InstallableModuleInterface010000
 {
 	/**
 	 * @var array
