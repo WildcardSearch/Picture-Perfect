@@ -21,15 +21,27 @@ function pp_replace_info()
 		'description' => 'replace or remove a posted image',
 		'actionPhrase' => 'Replace/Remove Images',
 		'pageAction' => 'view_replace',
-		'imageLimit' => 1,
+		'imageLimit' => 12,
 		'createsSet' => false,
 		'version' => '1.0',
 		'settings' => array(
 			'url' => array(
-				'title' => 'Replacement URL',
-				'description' => 'the URL of the image to use instead of the currently posted image',
+				'title' => 'Replacement Content',
+				'description' => 'the URL or text replacement to use instead of the currently posted image',
 				'optionscode' => 'text',
 				'value' => '',
+			),
+			'text_replacement' => array(
+				'title' => 'Replacement With Text',
+				'description' => 'YES to replace the entire MyCode with the supplied text (above), NO (default) to replace the image URL in the post<br />Replacement text may contain BB Code.',
+				'optionscode' => 'yesno',
+				'value' => '0',
+			),
+			'replace_all' => array(
+				'title' => 'Replacement All',
+				'description' => 'YES to replace any other images in the post with the same URL, NO (default) to only replace the selected image',
+				'optionscode' => 'yesno',
+				'value' => '0',
 			),
 		),
 	);
@@ -43,7 +55,7 @@ function pp_replace_info()
  */
 function pp_replace_process_images($images, $settings)
 {
-	global $html, $mybb, $lang;
+	global $mybb, $db, $lang, $html;
 
 	$messages = array();
 
@@ -52,48 +64,98 @@ function pp_replace_process_images($images, $settings)
 	$redirectInfo = array(
 		'action' => 'view_thread',
 		'tid' => $tid,
-		'page' => $mybb->input['page'],
 	);
 
-	$image = array_pop($images);
+	if ($mybb->input['page'] > 1) {
+		$redirectInfo['page'] = $mybb->input['page'];
+	}
 
 	$url = trim($settings['url']);
 
-	if ($url) {
-		// replace the image URL in the post
-		if (ppReplacePostImage($image['pid'], $image['url'], $url)) {
+	$action = 'replaced';
+	if (!$url) {
+		$action = 'removed';
+	}
+
+	$adjustImageCount = false;
+	$thing = 'Image URL';
+	if ($settings['text_replacement'] || $action == 'removed') {
+		$adjustImageCount = true;
+		$thing = 'Image';
+	}
+
+	$done = array();
+	foreach ($images as $id => $image) {
+		if (in_array($id, $done)) {
+			continue;
+		}
+
+		$info = ppReplacePostedImage($image, $url, $settings['text_replacement'], $settings['replace_all']);
+		if ($info['status'] === true) {
 			$messages[] = array(
 				'status' => 'success',
-				'message' => 'Image replaced successfully',
+				'message' => "{$thing} {$action} successfully",
 			);
 
-			// update the image
-			$image['url'] = $url;
-			$newImage = new PicturePerfectImage($image);
-			$newImage->save();
+			if ($action == 'replaced' && !$settings['replace_all'] && !$settings['text_replacement']) {
+				// update the image
+				$image['url'] = $url;
+				$newImage = new PicturePerfectImage($image);
+				$newImage->save();
+			} elseif (!$settings['replace_all']) {
+				// update the image
+				$newImage = new PicturePerfectImage($image);
+				$newImage->remove();
+			} else {
+				$done = array_merge($done, $info['affected']);
+				continue;
+			}
+
+			$done[] = $id;
 		} else {
 			$messages[] = array(
 				'status' => 'error',
-				'message' => 'Image URL could not be replaced',
+				'message' => "{$thing} could not be {$action}: {$info['message']}",
 			);
 		}
+	}
+
+	if ($adjustImageCount) {
+		$threadQuery = $db->simple_select('pp_images', 'COUNT(id) as image_count', "tid='{$tid}'");
+		$iCount = (int) $db->fetch_field($threadQuery, 'image_count');
+
+		$db->update_query('pp_image_threads', array('image_count' => $iCount), "tid='{$tid}'");
+
+		if ($iCount == 0) {
+			unset($redirectInfo['tid']);
+
+			if (isset($mybb->input['fid']) && $mybb->input['fid']) {
+				$fid = (int) $mybb->input['fid'];
+
+				$forumQuery = $db->simple_select('pp_images', 'COUNT(id) as image_count', "fid='{$fid}'");
+				$fCount = $db->fetch_field($forumQuery, 'image_count');
+			}
+
+			if ($fCount) {
+				$redirectInfo['action'] = 'view_forum';
+				$redirectInfo['fid'] = $mybb->input['fid'];
+			} else {
+				$redirectInfo['action'] = 'forums';
+			}
+		}
+	}
+
+	$dCount = count($done);
+	if ($dCount) {
+		$messages[] = array(
+			'status' => 'success',
+			'message' => "{$dCount} images affected.",
+		);
 	} else {
-		// remove the image from the post
-		if (ppRemovePostedImage($image)) {
-			$messages[] = array(
-				'status' => 'success',
-				'message' => 'Image successfully removed from the forum',
-			);
-
-			// update the image
-			$newImage = new PicturePerfectImage($image);
-			$newImage->remove();
-		} else {
-			$messages[] = array(
-				'status' => 'error',
-				'message' => 'Image could not be removed from the forum successfully',
-			);
-		}
+		$messages[] = array(
+			'status' => 'error',
+			'message' => "0 images affected.",
+		);
 	}
 
 	return array(

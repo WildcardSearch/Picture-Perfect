@@ -50,7 +50,6 @@ $tables = array(
 			'title' => 'TEXT',
 			'description' => 'TEXT',
 			'images' => 'TEXT',
-			'destination' => 'TEXT',
 			'active' => 'INT',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
@@ -96,7 +95,6 @@ $tables = array(
 		'title' => 'TEXT',
 		'description' => 'TEXT',
 		'images' => 'TEXT',
-		'destination' => 'TEXT',
 		'active' => 'INT(1)',
 		'dateline' => 'INT(10) NOT NULL',
 	),
@@ -112,13 +110,21 @@ $settings = array(
 			'isdefault' => 0,
 		),
 		'settings' => array(
+			'pp_images_per_row' => array(
+				'name' => 'pp_images_per_row',
+				'title' => 'Images Per Row',
+				'description' => 'In View Thread ACP page, enter the number of images per row. eg. 3 (default)',
+				'optionscode' => 'text',
+				'value' => '3',
+				'disporder' => '10',
+			),
 			'pp_minify_js' => array(
 				'name' => 'pp_minify_js',
 				'title' => $lang->pp_minify_js_title,
 				'description' => $lang->pp_minify_js_desc,
 				'optionscode' => 'yesno',
 				'value' => '0',
-				'disporder' => '50'
+				'disporder' => '20',
 			),
 		),
 	),
@@ -150,6 +156,11 @@ EOF
 		'bad-image.png' => array(
 			'image' => <<<EOF
 iVBORw0KGgoAAAANSUhEUgAAAJYAAACWCAYAAAA8AXHiAAAABmJLR0QARABzANJqWiAHAAAACXBIWXMAAC3UAAAt1AEYYcVpAAAAB3RJTUUH4wIQDyQMhd8twwAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAGVSURBVHja7dqxDcMgAERRYrER0zIUMzl9Cld3ReT3Wuu6L5AsPnvvezw45zx9HmutYW//6xpQICyEhbAQFggLYfFm038a+8beiYWrEGEhLBAWwkJYEDb9p7Fv7J1YuAoRFsICYSEshAVh3mPZV/ZOLFyFCAthgbAQFsKCMO+x7Ct7JxauQoSFsEBYCAthQZj3WPaVvRMLVyHCQlggLISFsCDMeyz7yt6JhasQYSEsEBbCQlgQ5j2WfWXvxMJViLAQFggLYSEsCPMey76yd2LhKkRYCAuEhbAQFoR5j2Vf2TuxcBUiLIQFwkJYCAvCvMeyr+ydWLgKERbCAmEhLIQFYd5j2Vf2TixchQgLYYGwEBbCgjDvsewreycWrkKEhbBAWAgLYUGY91j2lb0TC1chwkJYICyEhbAgzHss+8reiYWrEGEhLBAWwkJYEOY9ln1l78TCVYiwEBYIC2EhLAjzHsu+sndi4SpEWAgLhIWwEBaEeY9lX9k7sXAVIiyEBcJCWAgLwrzHsq/snVi4ChEWwgJh8Se+5aYgOLxkeTMAAAAASUVORK5CYII=
+EOF
+		),
+		'add.png' => array(
+			'image' => <<<EOF
+iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9wMGBAtOZp8lRIAAAEYSURBVDjLY1DaKM3EQCZQ2ijNxAhlMNzzf4oiuffx7v9Hnx5hYGBgYLCWtmFwlnVlRNOMqkdpozQjsubQHQH/lTZK/1faKP3fZYrD/4V75/9HUssNY8Odf8//6X+ljdJEOfue/9OvGAZADWFQ2ijNjEcz5z3/p/+QxViQnU3I9nqelm8MeyHseOdERrgBex/v/j/j6lS8mhdfX4gRyM6yrowsDAwMDEefHmE4+/M0Ts33ZG9jiMFiiOw0gBIG1tI2DIfOHMRps8gxCQw56xwbhAHOsq6MyPGMzc9BmiEofFjCgscCLFSVNkoz1PO0YI2RWYJTGNFTLBPe5InuJUg6wW4AIc1ohsCTPSWZif+e/9OPKKaRkZ1VAUVpe31b/eHeAAAAAElFTkSuQmCC
 EOF
 		),
 	),

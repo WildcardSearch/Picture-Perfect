@@ -40,19 +40,20 @@ function pp_admin()
 	}
 
 	// URL, link and image markup generator
-	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'addon', 'pp_inline_ids'));
+	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'pid', 'addon', 'pp_inline_ids'));
 
 	$modules = ppGetAllModules();
 
 	// if there is an existing function for the action
-	$page_function = 'pp_admin_'.$mybb->input['action'];
-	if (function_exists($page_function)) {
+	$pageFunction = 'pp_admin_'.$mybb->input['action'];
+	if (function_exists($pageFunction)) {
 		// run it
-		$page_function();
+		$pageFunction();
 	} else {
 		// default to the main page
 		pp_admin_forums();
 	}
+
 	// get out
 	exit();
 }
@@ -84,7 +85,17 @@ function pp_admin_forums()
 
 	// set up the page header
 	$page->extra_header .= <<<EOF
+<style>
+div.pp-forum-jump-form {
+	display: inline;
+	float: right;
+	padding-right: 16px;
+}
 
+div.pp-forum-jump-form input[type=text] {
+	width: 200px;
+}
+</style>
 EOF;
 
 	$page->output_header("{$lang->pp} &mdash; View Forums");
@@ -98,7 +109,19 @@ EOF;
 
 	ppBuildForumList($table, $fid);
 
-	$table->output('Forums');
+	$jumpForm = <<<EOF
+<div class="pp-forum-jump-form">
+	<form id="forum-jump">
+		<input type="hidden" name="module" value="config-pp" />
+		<input type="hidden" name="action" value="parse_url" />
+		<input type="hidden" name="from[action]" value="forums" />
+		<input type="text" name="url" value="" placeholder="Enter TID or link here..." />&nbsp;
+		<input type="submit" value="Go" />
+	</form>
+</div>
+EOF;
+
+	$table->output('Forums'.$jumpForm);
 
 	$page->output_footer();
 }
@@ -138,6 +161,17 @@ function pp_admin_view_threads()
 	// -->
 	</script>
 
+	<style>
+	div.pp-forum-jump-form {
+		display: inline;
+		float: right;
+		padding-right: 16px;
+	}
+
+	div.pp-forum-jump-form input[type=text] {
+		width: 200px;
+	}
+	</style>
 EOF;
 
 	$page->output_header("{$lang->pp} &mdash; {$forum['name']}");
@@ -213,7 +247,11 @@ EOF;
 
 	if ($db->num_rows($query) > 0) {
 		while ($thread = $db->fetch_array($query)) {
-			$table->construct_cell($html->link($html->url(array('action' => 'view_thread', 'tid' => $thread['tid'], 'fid' => $thread['fid'])), $thread['subject']));
+			$table->construct_cell($html->link($html->url(array(
+				'action' => 'view_thread',
+				'tid' => $thread['tid'],
+				'fid' => $thread['fid'],
+			)), $thread['subject']));
 
 			$threadUrl = '../'.get_thread_link($thread['tid']);
 			$threadLink = $html->link($threadUrl, "#{$thread['tid']}", array('target' => '_blank'));
@@ -238,7 +276,21 @@ EOF;
 		$table->construct_row();
 	}
 
-	$table->output($lang->pp_image_threads);
+	$jumpForm = <<<EOF
+<div class="pp-forum-jump-form">
+	<form id="forum-jump">
+		<input type="hidden" name="module" value="config-pp" />
+		<input type="hidden" name="action" value="parse_url" />
+		<input type="hidden" name="from[action]" value="view_threads" />
+		<input type="hidden" name="from[fid]" value="{$fid}" />
+		<input type="hidden" name="from[page]" value="{$mybb->input['page']}" />
+		<input type="text" name="url" value="" placeholder="Enter TID or link here..." />&nbsp;
+		<input type="submit" value="Go" />
+	</form>
+</div>
+EOF;
+
+	$table->output($lang->pp_image_threads.$jumpForm);
 	$form->end();
 	echo('<br />');
 
@@ -260,8 +312,27 @@ function pp_admin_view_thread()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
 
+	$perPage = 12;
 	$selected = $mybb->input['pp_inline_ids'];
 	$tid = (int) $mybb->input['tid'];
+	$pid = (int) $mybb->input['pid'];
+
+	if ($pid) {
+		if (!$tid) {
+			$post = get_post($pid);
+			$tid = (int) $post['tid'];
+		}
+
+		$query = $db->simple_select('pp_images', 'count(id) as count', "tid={$tid} AND setid=0 AND pid < '{$pid}'", array(
+			'order_by' => 'pid',
+			'order_dir' => 'ASC, id ASC',
+		));
+
+		$count = $db->fetch_field($query, 'count');
+
+		$mybb->input['page'] = (int)($count / $perPage) + 1;
+	}
+
 	$titleQuery = $db->simple_select('threads', 'subject', "tid={$tid}");
 	$threadTitle = $db->fetch_field($titleQuery, 'subject');
 
@@ -297,7 +368,17 @@ function pp_admin_view_thread()
 	// -->
 	</script>
 
-	<style>
+<style>
+div.pp-forum-jump-form {
+	display: inline;
+	float: right;
+	padding-right: 16px;
+}
+
+div.pp-forum-jump-form input[type=text] {
+	width: 200px;
+}
+
 div.imageContainer {
 	padding: 0px;
 	margin: 0px;
@@ -341,6 +422,25 @@ div.thumbnail.localImage {
 	border-color: #32cd32;
 }
 
+div.domain-label {
+	background: rgba(255,255,255,0.5);
+
+	width: 100%;
+	height: 26px;
+	overflow: hidden;
+	text-align: center;
+	top: 124px;
+	position: relative;
+
+	text-shadow:
+		-1px -1px 0 white,
+		1px -1px 0 white,
+		-1px 1px 0 white,
+		1px 1px 0 white;
+
+	border-radius: 0px 0px 0px 2px;
+}
+
 div.imageInfo {
 	padding: 3px 0px 3px 0px;
 
@@ -364,6 +464,10 @@ div.infoRow {
 div.buttonRow {
 	padding-top: 16px;
 	padding-left: 85px;
+}
+
+div.image-popup {
+	z-index: 100;
 }
 
 div.imageLinks {
@@ -455,18 +559,31 @@ span.inlineSubmit {
   -ms-transform: rotate(45deg);
   transform: rotate(45deg);
 }
-	</style>
+</style>
 
 EOF;
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_view_thread}");
 	pp_output_tabs('pp_view_thread', $threadTitle, $tid);
 
+	echo <<<EOF
+<div class="pp-forum-jump-form">
+	<form id="forum-jump">
+		<input type="hidden" name="module" value="config-pp" />
+		<input type="hidden" name="action" value="parse_url" />
+		<input type="hidden" name="from[action]" value="view_thread" />
+		<input type="hidden" name="from[tid]" value="{$tid}" />
+		<input type="hidden" name="from[page]" value="{$mybb->input['page']}" />
+		<input type="text" name="url" value="" placeholder="Enter TID or link here..." />&nbsp;
+		<input type="submit" value="Go" />
+	</form>
+</div>
+EOF;
+
 	// get a total count on the items
 	$query = $db->simple_select('pp_images', 'COUNT(id) AS resultCount', "tid={$tid} AND setid=0");
 	$resultCount = $db->fetch_field($query, 'resultCount');
 
-	$perPage = 12;
 	$totalPages = ceil($resultCount / $perPage);
 
 	// adjust the page number if the user has entered manually or is returning to a page that no longer exists (deleted last item on page)
@@ -483,29 +600,36 @@ EOF;
 		$mybb->input['page'] = (int) $mybb->input['page'];
 	}
 
-	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'configure', 'page' => $mybb->input['page'])), 'post');
+	$form = new Form($html->url(array(
+		'action' => 'process_images',
+		'mode' => 'configure',
+		'page' => $mybb->input['page'],
+	)), 'post');
 
-	$taskQuery = $db->simple_select('pp_image_tasks', '*', "pid='0'", array('order_by' => 'title', 'order_dir' => 'ASC'));
+	$taskQuery = $db->simple_select('pp_image_tasks', '*', "pid='0'", array(
+		'order_by' => 'title',
+		'order_dir' => 'ASC',
+	));
 
-	if ($db->num_rows($taskQuery)) {
-		$options = '';
-		while ($task = $db->fetch_array($taskQuery)) {
-			$options .= <<<EOF
 
-			<option value="{$task['id']}">{$task['title']}</option>
+	$options = '';
+	while ($task = $db->fetch_array($taskQuery)) {
+		$options .= <<<EOF
+
+	<option value="{$task['id']}">{$task['title']}</option>
 EOF;
-		}
+	}
 
-		$taskSelect = <<<EOF
+	$taskSelect = <<<EOF
 <span class="inlineSubmit">
 	<strong>Process Images:</strong>&nbsp;
 	<select name="task">{$options}
+		<option value="caption">Update Captions</option>
 	</select>
 	<input type="submit" class="pp_inline_submit button" name="pp_inline_task" value="{$lang->go} ({$selectedCount})"/>
 	<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
 </span>
 EOF;
-	}
 
 	$taskOptions = '';
 	$query = $db->simple_select('pp_image_task_lists', '*', 'active=1');
@@ -536,6 +660,9 @@ EOF;
 	 * @todo create setting for images per row
 	 */
 	$ipr = 3;
+	if ($mybb->settings['pp_images_per_row']) {
+		$ipr = (int) $mybb->settings['pp_images_per_row'];
+	}
 
 	$table = new Table;
 	$table->construct_header($taskSelect.$taskListSelect.$selectAllCheck, array('width' => '20%', 'colspan' => $ipr));
@@ -544,11 +671,23 @@ EOF;
 	$start = ($mybb->input['page'] - 1) * $perPage;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
-		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_thread', 'tid' => $tid)));
-		echo($pagination.'<br />');
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array(
+			'action' => 'view_thread',
+			'tid' => $tid,
+		)));
+		echo($pagination);
+	} else {
+		echo('<br />');
 	}
 
-	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0", array('limit_start' => $start, 'limit' => $perPage));
+	echo('<br />');
+
+	$query = $db->simple_select('pp_images', '*', "tid={$tid} AND setid=0", array(
+		'limit_start' => $start,
+		'limit' => $perPage,
+		'order_by' => 'pid',
+		'order_dir' => 'ASC, id ASC'
+	));
 
 	$count = 0;
 	$images = array();
@@ -574,13 +713,44 @@ EOF;
 
 		$imageLink = $html->link($image['url'], 'Image Link', array('target' => '_blank'));
 
+		$urlInfo = parse_url($image['url']);
+
+		$basePiece = $urlInfo['host'];
+		$trimmed = ppGetBaseDomain($urlInfo['host']);
+		if ($trimmed) {
+			$basePiece = $trimmed;
+		}
+
+		$domainTitle = htmlspecialchars_uni($basePiece);
+
+		$domainLength = my_strlen($basePiece);
+		$fs = 1;
+		if ($domainLength > 10) {
+			$fs = (float) ($domainLength - 10) * 0.03;
+			$fs = 1 - ($fs);
+		}
+
 		$popup = new PopupMenu("control_{$id}", 'Options');
 
 		foreach ((array) $modules as $addon => $module) {
-			$popup->add_item($module->get('actionPhrase'), $html->url(array('action' => 'process_images', 'mode' => 'configure', 'addon' => $addon, 'pp_inline_ids' => array($id))));
+			$popup->add_item($module->get('actionPhrase'), $html->url(array(
+				'action' => 'process_images',
+				'mode' => 'configure',
+				'addon' => $addon,
+				'pp_inline_ids' => array($id),
+			)));
 		}
 
-		$popup->add_item('Delete', '');
+		$popup->add_item('Update Caption', $html->url(array(
+			'action' => 'update_caption',
+			'id' => $id,
+			'tid' => $tid,
+			'fid' => $fid,
+			'page' => $mybb->input['page'],
+		)));
+
+		// add z-index to popup (hacky, I know)
+		$thisPopup = str_replace(' class="popup_menu', ' class="popup_menu image-popup', $popup->fetch());
 
 		$checkId = "imageCheck_{$id}";
 
@@ -590,6 +760,7 @@ EOF;
 		<div class="thumbnail{$imageClass}" style="background-image: url({$image['url']}), url(styles/{$cp_style}/images/pp/bad-image.png);">
 			<input id="{$checkId}" type="checkbox" name="pp_inline_ids[{$id}]" value="" class="checkbox_input pp_check" />
 			<span class="checkmark"></span>
+			<div class="domain-label" title="{$domainTitle}" style="font-size: {$fs}em;">{$basePiece}</div>
 		</div>
 	</label>
 	<div class="imageInfo">
@@ -600,10 +771,10 @@ EOF;
 			<span>Width: 0px | Height: 0px;</span>
 		</div>
 		<div class="infoRow captionRow">
-			<input class="captionInput" type="text" name="image_caption[{$id}]" value="" placeholder="Your caption here..."/>
+			<input class="captionInput" type="text" name="image_captions[{$id}]" value="{$image['caption']}" placeholder="Your caption here..." title="{$image['caption']}" />
 		</div>
 		<div class="buttonRow">
-			{$popup->fetch()}
+			{$thisPopup}
 		</div>
 	</div>
 </div>
@@ -620,8 +791,7 @@ EOF;
 	}
 
 	$blankElement = <<<EOF
-<div class="blankElement">
-</div>
+<div class="blankElement"></div>
 EOF;
 
 	$extra = count($images) % $ipr;
@@ -638,7 +808,12 @@ EOF;
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("pp_inline_ids[{$id}]", 1);
 	}
-	echo $form->generate_hidden_field('tid', $tid);
+
+	echo(
+		$form->generate_hidden_field('tid', $tid).
+		$form->generate_hidden_field('fid', $fid).
+		$form->generate_hidden_field('page', $mybb->input['page'])
+	);
 
 	$form->end();
 	echo('<br />');
@@ -677,18 +852,23 @@ function pp_admin_sets()
 
 EOF;
 
+	$redirectUrl = $html->url(array(
+		'action' => 'sets',
+		'page' => $mybb->input['page'],
+	));
+
 	if ($mybb->request_method == 'post') {
 		if ($mybb->input['mode'] == 'inline') {
 			// verify incoming POST request
 			if (!verify_post_check($mybb->input['my_post_key'])) {
 				flash_message($lang->invalid_post_verify_key2, 'error');
-				admin_redirect($html->url(array('action' => 'sets', 'page' => $mybb->input['page'])));
+				admin_redirect($redirectUrl);
 			}
 
 			if (!is_array($mybb->input['pp_inline_ids']) ||
 				empty($mybb->input['pp_inline_ids'])) {
 				flash_message($lang->pp_inline_selection_error, 'error');
-				admin_redirect($html->url(array('action' => 'sets', 'page' => $mybb->input['page'])));
+				admin_redirect($redirectUrl);
 			}
 
 			$job_count = 0;
@@ -709,7 +889,7 @@ EOF;
 				++$job_count;
 			}
 			flash_message($lang->sprintf($lang->pp_inline_success, $job_count, $lang->pp_image_sets, $action), 'success');
-			admin_redirect($html->url(array('action' => 'sets', 'page' => $mybb->input['page'])));
+			admin_redirect($redirectUrl);
 		}
 	}
 
@@ -717,7 +897,7 @@ EOF;
 		// verify incoming POST request
 		if (!verify_post_check($mybb->input['my_post_key'])) {
 			flash_message($lang->invalid_post_verify_key2, 'error');
-			admin_redirect($html->url(array('action' => 'sets')));
+			admin_redirect($redirectUrl);
 		}
 
 		// good info?
@@ -737,7 +917,7 @@ EOF;
 			// boo, we suck
 			flash_message($lang->sprintf($lang->pp_message_fail, $lang->pp_image_sets, $lang->pp_deleted), 'error');
 		}
-		admin_redirect($html->url(array('action' => 'sets')));
+		admin_redirect($redirectUrl);
 	}
 
 	$page->output_header("{$lang->pp} - {$lang->pp_admin_sets}");
@@ -795,7 +975,12 @@ EOF;
 		echo($pagination.'<br />');
 	}
 
-	$query = $db->simple_select('pp_image_sets', '*', '', array('order_by' => 'title ASC', 'limit_start' => $start, 'limit' => $perPage));
+	$query = $db->simple_select('pp_image_sets', '*', '', array(
+		'order_by' => 'title ASC',
+		'limit_start' => $start,
+		'limit' => $perPage,
+	));
+
 	while ($imageSet = $db->fetch_array($query)) {
 		$imageSets[$imageSet['id']] = $imageSet;
 	}
@@ -805,11 +990,24 @@ EOF;
 			$query = $db->simple_select('pp_images', 'COUNT(id) as image_count', "setid={$id}");
 			$imageCount = $db->fetch_field($query, 'image_count');
 
-			$editUrl = $html->url(array('action' => 'edit_set', 'id' => $id, 'my_post_key' => $mybb->post_code));
+			$editUrl = $html->url(array(
+				'action' => 'edit_set',
+				'id' => $id,
+				'my_post_key' => $mybb->post_code,
+			));
 
-			$deleteUrl = $html->url(array('action' => 'sets', 'mode' => 'delete', 'id' => $id, 'my_post_key' => $mybb->post_code));
+			$deleteUrl = $html->url(array(
+				'action' => 'sets',
+				'mode' => 'delete',
+				'id' => $id,
+				'my_post_key' => $mybb->post_code,
+			));
 
-			$table->construct_cell($html->link($html->url(array('action' => 'view_set', 'id' => $id)), $imageSet['title']));
+			$table->construct_cell($html->link($html->url(array(
+				'action' => 'view_set',
+				'id' => $id,
+			)), $imageSet['title']));
+
 			$table->construct_cell($imageSet['description']);
 			$table->construct_cell($imageCount);
 
@@ -866,14 +1064,23 @@ function pp_admin_edit_set()
 		$imageSet->set($mybb->input);
 		if (!$imageSet->save()) {
 			flash_message($lang->pp_edit_set_fail_message, 'error');
-			admin_redirect($html->url(array('action' => 'edit_set', 'id' => $id)));
+			admin_redirect($html->url(array(
+				'action' => 'edit_set',
+				'id' => $id,
+			)));
 		}
 
 		flash_message($lang->pp_edit_set_success_message, 'success');
-		admin_redirect($html->url(array('action' => 'view_set', 'id' => $id)));
+		admin_redirect($html->url(array(
+			'action' => 'view_set',
+			'id' => $id,
+		)));
 	}
 
-	$form = new Form($html->url(array('action' => 'edit_set', 'id' => $id)), 'post');
+	$form = new Form($html->url(array(
+		'action' => 'edit_set',
+		'id' => $id,
+	)), 'post');
 
 	$formContainer = new FormContainer($lang->pp_admin_edit_set);
 
@@ -957,7 +1164,10 @@ EOF;
 	$perPage = 12;
 	$totalPages = ceil($resultCount / $perPage);
 
-	$form = new Form($html->url(array('action' => 'view_set', 'mode' => 'inline')), 'post');
+	$form = new Form($html->url(array(
+		'action' => 'view_set',
+		'mode' => 'inline',
+	)), 'post');
 
 	echo <<<EOF
 <div>
@@ -993,11 +1203,19 @@ EOF;
 	$start = ($mybb->input['page'] - 1) * $perPage;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
-		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_set', 'id' => $id)));
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array(
+			'action' => 'view_set',
+			'id' => $id,
+		)));
+
 		echo($pagination.'<br />');
 	}
 
-	$query = $db->simple_select('pp_images', '*', "setid={$id}", array('limit_start' => $start, 'limit' => $perPage));
+	$query = $db->simple_select('pp_images', '*', "setid={$id}", array(
+		'limit_start' => $start,
+		'limit' => $perPage,
+	));
+
 	$count = 0;
 	$images = array();
 	while ($image = $db->fetch_array($query)) {
@@ -1031,7 +1249,10 @@ EOF;
 		$table->construct_row();
 	}
 
-	$checkbox = $form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all'));
+	$checkbox = $form->generate_check_box('', '', '', array(
+		'id' => 'pp_select_all',
+		'class' => 'pp_select_all',
+	));
 
 	$table->output($lang->pp_image_set." &mdash; {$imageSet->get('title')}".$checkbox);
 	$form->end();
@@ -1055,18 +1276,23 @@ function pp_admin_image_tasks()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
 
+	$redirectUrl = $html->url(array(
+		'action' => 'image_tasks',
+		'page' => $mybb->input['page'],
+	));
+
 	if ($mybb->request_method == 'post') {
 		// verify incoming POST request
 		if (!verify_post_check($mybb->input['my_post_key'])) {
 			flash_message($lang->invalid_post_verify_key2, 'error');
-			admin_redirect($html->url(array('action' => 'image_tasks')));
+			admin_redirect($redirectUrl);
 		}
 
 		if ($mybb->input['mode'] == 'inline') {
 			if (!is_array($mybb->input['pp_inline_ids']) ||
 				empty($mybb->input['pp_inline_ids'])) {
 				flash_message($lang->pp_inline_selection_error, 'error');
-				admin_redirect($html->url(array('action' => 'image_tasks', 'page' => $mybb->input['page'])));
+				admin_redirect($redirectUrl);
 			}
 
 			$job_count = 0;
@@ -1088,7 +1314,7 @@ function pp_admin_image_tasks()
 			}
 
 			flash_message($lang->sprintf($lang->pp_inline_success, $job_count, $lang->image_tasks, $action), 'success');
-			admin_redirect($html->url(array('action' => 'image_tasks', 'page' => $mybb->input['page'])));
+			admin_redirect($redirectUrl);
 		}
 	}
 
@@ -1108,7 +1334,7 @@ function pp_admin_image_tasks()
 		} else {
 			flash_message($lang->sprintf($lang->pp_message_fail, $lang->image_tasks, $lang->pp_deleted), 'error');
 		}
-		admin_redirect($html->url(array('action' => 'image_tasks')));
+		admin_redirect($redirectUrl);
 	}
 
 	$page->add_breadcrumb_item($lang->pp, $html->url());
@@ -1139,12 +1365,16 @@ EOF;
 
 	// get a total count on the items
 	$query = $db->simple_select('pp_image_tasks', 'COUNT(id) AS resultCount', "lid=0");
+
 	$resultCount = $db->fetch_field($query, 'resultCount');
 
 	$perPage = 12;
 	$totalPages = ceil($resultCount / $perPage);
 
-	$form = new Form($html->url(array('action' => 'image_tasks', 'mode' => 'inline')), 'post');
+	$form = new Form($html->url(array(
+		'action' => 'image_tasks',
+		'mode' => 'inline',
+	)), 'post');
 
 	echo <<<EOF
 <div>
@@ -1162,8 +1392,20 @@ EOF;
 <br />
 EOF;
 
-	$newTaskUrl = $html->url(array('action' => 'edit_image_task'));
-	$newTaskLink = $html->link($newTaskUrl, 'Add a new image task', array('style' => 'font-weight: bold;', 'title' => 'Add a new image task', 'icon' => "styles/{$cp_style}/images/asb/add.png"), array('alt' => '+', 'style' => 'margin-bottom: -3px;', 'title' => 'Add a new image task'));
+	$newTaskUrl = $html->url(array(
+		'action' => 'edit_image_task',
+	));
+
+	$newTaskLink = $html->link($newTaskUrl, 'Add a new image task', array(
+		'style' => 'font-weight: bold;',
+		'title' => 'Add a new image task',
+		'icon' => "styles/{$cp_style}/images/pp/add.png",
+	), array(
+		'alt' => '+',
+		'style' => 'margin-bottom: -3px;',
+		'title' => 'Add a new image task',
+	));
+
 	echo($newTaskLink.'<br /><br />');
 
 	$table = new Table;
@@ -1191,11 +1433,21 @@ EOF;
 	$start = ($mybb->input['page'] - 1) * $perPage;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
-		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_tasks', 'id' => $id)));
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array(
+			'action' => 'view_tasks',
+			'id' => $id,
+		)));
+
 		echo($pagination.'<br />');
 	}
 
-	$query = $db->simple_select('pp_image_tasks', '*', "lid=0", array('limit_start' => $start, 'limit' => $perPage));
+	$query = $db->simple_select('pp_image_tasks', '*', "lid=0", array(
+		'limit_start' => $start,
+		'limit' => $perPage,
+		'order_by' => 'task_order',
+		'order_dir' => 'ASC, id ASC',
+	));
+
 	$count = 0;
 	$tasks = array();
 	while ($task = $db->fetch_array($query)) {
@@ -1205,7 +1457,11 @@ EOF;
 	foreach ($tasks as $id => $task) {
 		$addonName = $modules[$task['addon']]->get('title');
 
-		$editUrl = $html->url(array('action' => 'edit_image_task', 'id' => $id));
+		$editUrl = $html->url(array(
+			'action' => 'edit_image_task',
+			'id' => $id,
+		));
+
 		$editLink = $html->link($editUrl, $task['title']);
 
 		$table->construct_cell($editLink);
@@ -1222,7 +1478,10 @@ EOF;
 		$table->construct_row();
 	}
 
-	$checkbox = $form->generate_check_box('', '', '', array('id' => 'pp_select_all', 'class' => 'pp_select_all'));
+	$checkbox = $form->generate_check_box('', '', '', array(
+		'id' => 'pp_select_all',
+		'class' => 'pp_select_all',
+	));
 
 	$table->output("View Tasks &mdash; {$task['title']}".$checkbox);
 	$form->end();
@@ -1256,6 +1515,8 @@ function pp_admin_edit_image_task()
 	if ($mybb->request_method == 'post') {
 		$module = $modules[$mybb->input['addon']];
 
+		$redirectUrl = $html->url(array('action' => 'image_task_lists', 'page' => $mybb->input['page']));
+
 		if ($mybb->input['mode'] == 'configure') {
 			$page->add_breadcrumb_item('Configure Image Task');
 
@@ -1271,14 +1532,14 @@ function pp_admin_edit_image_task()
 				$mybb->input['setid'] = $imageSet->save();
 				if (!$mybb->input['setid']) {
 					flash_message('could not save image set', 'error');
-					admin_redirect($html->url(array('action' => 'image_task_lists')));
+					admin_redirect($redirectUrl);
 				}
 			} else {
 				$imageSet = new PicturePerfectImageSet($mybb->input['setid']);
 
 				if (!$imageSet->isValid()) {
 					flash_message('Invalid image set', 'error');
-					admin_redirect($html->url(array('action' => 'image_task_lists')));
+					admin_redirect($redirectUrl);
 				}
 			}
 
@@ -1287,7 +1548,14 @@ function pp_admin_edit_image_task()
 
 			$module->outputSettings($formContainer);
 
-			echo($form->generate_hidden_field('id', $id).$form->generate_hidden_field('addon', $mybb->input['addon']).$form->generate_hidden_field('title', $mybb->input['title']).$form->generate_hidden_field('description', $mybb->input['description']).$form->generate_hidden_field('task_order', $mybb->input['task_order']).$form->generate_hidden_field('setid', $mybb->input['setid']));
+			echo(
+				$form->generate_hidden_field('id', $id).
+				$form->generate_hidden_field('addon', $mybb->input['addon']).
+				$form->generate_hidden_field('title', $mybb->input['title']).
+				$form->generate_hidden_field('description', $mybb->input['description']).
+				$form->generate_hidden_field('task_order', $mybb->input['task_order']).
+				$form->generate_hidden_field('setid', $mybb->input['setid'])
+			);
 
 			$formContainer->end();
 			$buttons[] = $form->generate_submit_button('Save Task', array('name' => 'process_submit'));
@@ -1311,11 +1579,17 @@ function pp_admin_edit_image_task()
 
 		if (!$task->save()) {
 			flash_message('fail', 'error');
-			admin_redirect($html->url(array('action' => 'edit_image_task', 'mode' => 'configure')));
+			admin_redirect($html->url(array(
+				'action' => 'edit_image_task',
+				'mode' => 'configure',
+			)));
 		}
 
 		flash_message('success', 'success');
-		admin_redirect($html->url(array('action' => 'image_tasks', 'id' => $id)));
+		admin_redirect($html->url(array(
+			'action' => 'image_tasks',
+			'id' => $id,
+		)));
 	}
 
 	if (is_array($modules) &&
@@ -1341,15 +1615,22 @@ function pp_admin_edit_image_task()
 	$page->output_header("{$lang->pp} - Edit Image Task");
 	pp_output_tabs('pp_edit_image_task');
 
-	$form = new Form($html->url(array('action' => 'edit_image_task', 'mode' => 'configure')), 'post');
+	$form = new Form($html->url(array(
+		'action' => 'edit_image_task',
+		'mode' => 'configure',
+	)), 'post');
 
 	$formContainer = new FormContainer();
 
 	$formContainer->output_row('Title', '', $form->generate_text_box('title', $data['title']));
 	$formContainer->output_row('Description', '', $form->generate_text_box('description', $data['description']));
-	$formContainer->output_row('Module', '', $form->generate_select_box('addon', $options));
+	$formContainer->output_row('Module', '', $form->generate_select_box('addon', $options, $data['addon']));
 	$formContainer->output_row('Image Set', '', $form->generate_select_box('setid', $sets, $data['setid']));
-	$formContainer->output_row('Order', '', $form->generate_text_box('task_order', $data['task_order']).$form->generate_hidden_field('id', $id).$form->generate_hidden_field('pid', 0));
+	$formContainer->output_row('Order', '',
+		$form->generate_text_box('task_order', $data['task_order']).
+		$form->generate_hidden_field('id', $id).
+		$form->generate_hidden_field('pid', 0)
+	);
 
 	$formContainer->end();
 	$buttons[] = $form->generate_submit_button('Configure Module and Save', array('name' => 'edit_image_task_submit'));
@@ -1368,18 +1649,23 @@ function pp_admin_image_task_lists()
 {
 	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
 
+	$redirectUrl = $html->url(array(
+		'action' => 'image_task_lists',
+		'page' => $mybb->input['page'],
+	));
+
 	if ($mybb->request_method == 'post') {
 		// verify incoming POST request
 		if (!verify_post_check($mybb->input['my_post_key'])) {
 			flash_message($lang->invalid_post_verify_key2, 'error');
-			admin_redirect($html->url(array('action' => 'image_task_lists')));
+			admin_redirect($redirectUrl);
 		}
 
 		if ($mybb->input['mode'] == 'inline') {
 			if (!is_array($mybb->input['pp_inline_ids']) ||
 				empty($mybb->input['pp_inline_ids'])) {
 				flash_message($lang->pp_inline_selection_error, 'error');
-				admin_redirect($html->url(array('action' => 'image_task_lists', 'page' => $mybb->input['page'])));
+				admin_redirect($redirectUrl);
 			}
 
 			$job_count = 0;
@@ -1401,7 +1687,7 @@ function pp_admin_image_task_lists()
 			}
 
 			flash_message($lang->sprintf($lang->pp_inline_success, $job_count, $lang->image_task_lists, $action), 'success');
-			admin_redirect($html->url(array('action' => 'image_task_lists', 'page' => $mybb->input['page'])));
+			admin_redirect($redirectUrl);
 		}
 	}
 
@@ -1421,7 +1707,8 @@ function pp_admin_image_task_lists()
 		} else {
 			flash_message($lang->sprintf($lang->pp_message_fail, $lang->image_task_lists, $lang->pp_deleted), 'error');
 		}
-		admin_redirect($html->url(array('action' => 'image_task_lists')));
+
+		admin_redirect($redirectUrl);
 	}
 
 	$page->add_breadcrumb_item($lang->pp, $html->url());
@@ -1457,7 +1744,10 @@ EOF;
 	$perPage = 12;
 	$totalPages = ceil($resultCount / $perPage);
 
-	$form = new Form($html->url(array('action' => 'image_task_lists', 'mode' => 'inline')), 'post');
+	$form = new Form($html->url(array(
+		'action' => 'image_task_lists',
+		'mode' => 'inline',
+	)), 'post');
 
 	echo <<<EOF
 <div>
@@ -1471,19 +1761,25 @@ EOF;
 	</span>
 </div>
 <br />
-<a href="index.php?module=config-pp&amp;action=" title="add new image task"></a>
 <br />
 EOF;
 
 	$newTaskUrl = $html->url(array('action' => 'edit_image_task_list'));
-	$newTaskLink = $html->link($newTaskUrl, 'Add a new image task list', array('style' => 'font-weight: bold;', 'title' => 'Add a new image task list', 'icon' => "styles/{$cp_style}/images/asb/add.png"), array('alt' => '+', 'style' => 'margin-bottom: -3px;', 'title' => 'Add a new image task list'));
+	$newTaskLink = $html->link($newTaskUrl, 'Add a new image task list', array(
+		'style' => 'font-weight: bold;',
+		'title' => 'Add a new image task list',
+		'icon' => "styles/{$cp_style}/images/pp/add.png"
+	), array(
+		'alt' => '+',
+		'style' => 'margin-bottom: -3px;',
+		'title' => 'Add a new image task list',
+	));
 	echo($newTaskLink.'<br /><br />');
 
 	$table = new Table;
 	$table->construct_header('Title', array('width' => '25%'));
 	$table->construct_header('Description', array('width' => '25%'));
 	$table->construct_header('Images', array('width' => '5%'));
-	$table->construct_header('Location', array('width' => '15%'));
 	$table->construct_header('Status', array('width' => '10%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
 
@@ -1505,7 +1801,11 @@ EOF;
 	$start = ($mybb->input['page'] - 1) * $perPage;
 	if ($resultCount > $perPage) {
 		// save the pagination for below and show it here as well
-		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array('action' => 'view_task_lists', 'id' => $id)));
+		$pagination = draw_admin_pagination($mybb->input['page'], $perPage, $resultCount, $html->url(array(
+			'action' => 'view_task_lists',
+			'id' => $id,
+		)));
+
 		echo($pagination.'<br />');
 	}
 
@@ -1515,7 +1815,11 @@ EOF;
 		$imageSets[$imageSet['id']] = $imageSet['title'];
 	}
 
-	$query = $db->simple_select('pp_image_task_lists', '*', '', array('limit_start' => $start, 'limit' => $perPage));
+	$query = $db->simple_select('pp_image_task_lists', '*', '', array(
+		'limit_start' => $start,
+		'limit' => $perPage,
+	));
+
 	$count = 0;
 	$taskLists = array();
 	while ($taskList = $db->fetch_array($query)) {
@@ -1533,13 +1837,16 @@ EOF;
 
 		$taskListStatus = $taskList['active'] ? 'Active' : 'Inactive';
 
-		$editUrl = $html->url(array('action' => 'edit_image_task_list', 'id' => $id));
+		$editUrl = $html->url(array(
+			'action' => 'edit_image_task_list',
+			'id' => $id,
+		));
+
 		$editLink = $html->link($editUrl, $taskList['title']);
 
 		$table->construct_cell($editLink);
 		$table->construct_cell($taskList['description']);
 		$table->construct_cell($imageCount);
-		$table->construct_cell($taskList['destination']);
 		$table->construct_cell($taskListStatus);
 		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', '', array('class' => 'pp_check')));
 
@@ -1547,7 +1854,7 @@ EOF;
 	}
 
 	if (empty($taskLists)) {
-		$table->construct_cell('nothing yet', array('colspan' => 7));
+		$table->construct_cell('nothing yet', array('colspan' => 6));
 		$table->construct_row();
 	}
 
@@ -1585,9 +1892,11 @@ function pp_admin_edit_image_task_list()
 	}
 
 	if ($mybb->request_method == 'post') {
+		$redirectUrl = $html->url(array('action' => 'image_task_lists'));
+
 		if (empty($mybb->input['tasks'])) {
 			flash_message('No tasks selected', 'error');
-			admin_redirect($html->url(array('action' => 'image_task_lists')));
+			admin_redirect($redirectUrl);
 		}
 
 		$mybb->input['tasks'] = implode(',', $mybb->input['tasks']);
@@ -1611,16 +1920,23 @@ function pp_admin_edit_image_task_list()
 
 		if (!$id) {
 			flash_message('fail', 'error');
-			admin_redirect($html->url(array('action' => 'edit_image_task_list')));
+			admin_redirect($redirectUrl);
 		}
 
 		flash_message('success', 'success');
-		admin_redirect($html->url(array('action' => 'image_task_lists', 'id' => $id)));
+		admin_redirect($html->url(array(
+			'action' => 'image_task_lists',
+			'id' => $id,
+		)));
 	}
 
 	$selected = array();
 	if ($id) {
-		$query = $db->simple_select('pp_image_tasks', '*', "lid='{$id}' AND pid !=0");
+		$query = $db->simple_select('pp_image_tasks', '*', "lid='{$id}' AND pid !=0", array(
+			'order_by' => 'task_order',
+			'order_dir' => 'ASC',
+		));
+
 		if ($db->num_rows($query)) {
 			while ($task = $db->fetch_array($query)) {
 				$selected[] = $task['pid'];
@@ -1650,8 +1966,10 @@ function pp_admin_edit_image_task_list()
 	$formContainer->output_row('Title', '', $form->generate_text_box('title', $data['title']));
 	$formContainer->output_row('Description', '', $form->generate_text_box('description', $data['description']));
 	$formContainer->output_row('Task(s)', '', $form->generate_select_box('tasks[]', $options, $selected, array('multiple' => true)));
-	$formContainer->output_row('Destination Path', '', $form->generate_text_box('destination', $data['destination']).$form->generate_hidden_field('id', $id));
-	$formContainer->output_row('Active?', '', $form->generate_yes_no_radio('active', $data['active']));
+	$formContainer->output_row('Active?', '',
+		$form->generate_yes_no_radio('active', $data['active']).
+		$form->generate_hidden_field('id', $id)
+	);
 
 	$formContainer->end();
 	$buttons[] = $form->generate_submit_button('Save Image Task List', array('name' => 'edit_image_task_list_submit'));
@@ -1678,13 +1996,20 @@ function pp_admin_scan_center()
 
 	if ($mybb->request_method == 'post' ||
 		$mybb->input['mode'] == 'inline') {
+		$redirectUrl = $html->url(array(
+			'action' => 'scan_center',
+			'mode' => 'confirm_overwrite',
+			'tid' => $tid,
+			'fid' => $fid,
+		));
+
 		if ($tid) {
 			if ($mybb->input['mode'] != 'override') {
 				$query = $db->simple_select('pp_images', 'id', "tid='{$tid}'");
 
 				if ($db->num_rows($query)) {
 					flash_message('Existing images found for this thread!', 'error');
-					admin_redirect($html->url(array('action' => 'scan_center', 'mode' => 'confirm_overwrite', 'tid' => $tid, 'fid' => $fid)));
+					admin_redirect($redirectUrl);
 				}
 			}
 
@@ -1695,7 +2020,7 @@ function pp_admin_scan_center()
 
 				if ($db->num_rows($query)) {
 					flash_message('Existing images found for this forum!', 'error');
-					admin_redirect($html->url(array('action' => 'scan_center', 'mode' => 'confirm_overwrite', 'tid' => $tid, 'fid' => $fid)));
+					admin_redirect($redirectUrl);
 				}
 			}
 
@@ -1706,7 +2031,7 @@ function pp_admin_scan_center()
 
 				if ($db->num_rows($query)) {
 					flash_message('Existing images found for this site!', 'error');
-					admin_redirect($html->url(array('action' => 'scan_center', 'mode' => 'confirm_overwrite')));
+					admin_redirect($redirectUrl);
 				}
 			}
 
@@ -1731,7 +2056,10 @@ function pp_admin_scan_center()
 </div>
 EOF;
 
-		$form = new Form($html->url(array('action' => 'scan_center', 'mode' => 'override')), 'post');
+		$form = new Form($html->url(array(
+			'action' => 'scan_center',
+			'mode' => 'override',
+		)), 'post');
 
 		echo($form->generate_hidden_field('tid', $tid));
 		echo($form->generate_hidden_field('fid', $fid));
@@ -1774,8 +2102,50 @@ function pp_admin_process_images()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
 
+	$redirectUrl = $html->url(array(
+		'action' => 'view_thread',
+		'tid' => $mybb->input['tid'],
+		'fid' => $mybb->input['fid'],
+		'page' => $mybb->input['page'],
+	));
+
 	if (isset($mybb->input['pp_task_submit'])) {
 		ppAddImagesToTaskList();
+	} elseif ($mybb->input['task'] == 'caption') {
+		if (empty($mybb->input['pp_inline_ids'])) {
+			flash_message('No selected images', 'error');
+			admin_redirect($redirectUrl);
+		}
+
+		$success = $fail = 0;
+		foreach ($mybb->input['pp_inline_ids'] as $id => $throwAway) {
+			$i = new PicturePerfectImage($id);
+			if (!$i->isValid()) {
+				$fail++;
+			} else {
+				$i->set('caption', $mybb->input['image_captions'][$id]);
+				if (!$i->save()) {
+					$fail++;
+				} else {
+					$success++;
+				}
+			}
+		}
+
+		$status = 'success';
+		$message = "{$success} caption(s) updated";
+		if ($fail) {
+			if ($success) {
+				$message .= "; {$fail} caption(s) failed.";
+				$status = '';
+			} else {
+				$message = "{$fail} caption(s) failed.";
+				$status = 'error';
+			}
+		}
+
+		flash_message($message, $status);
+		admin_redirect($redirectUrl);
 	}
 
 	$doTask = false;
@@ -1804,7 +2174,10 @@ function pp_admin_process_images()
 	$selectedCount = count($selected);
 
 	$tid = (int) $mybb->input['tid'];
-	$redirectUrl = $html->url(array('action' => 'view_thread', 'tid' => $tid));
+	$redirectUrl = $html->url(array(
+		'action' => 'view_thread',
+		'tid' => $tid,
+	));
 
 	if (!is_array($selected) ||
 		empty($selected)) {
@@ -1897,13 +2270,17 @@ EOF;
 	<br />
 EOF;
 
-	$form = new Form($html->url(array('action' => 'process_images', 'mode' => 'finalize')), 'post');
+	$form = new Form($html->url(array(
+		'action' => 'process_images',
+		'mode' => 'finalize',
+	)), 'post');
+
 	$formContainer = new FormContainer($module->get('title').' Settings');
 
 	if ($module->get('createsSet')) {
 		$setArray = array('new' => 'new set');
 
-		$query = $db->simple_select('pp_image_sets', 'id,title');
+		$query = $db->simple_select('pp_image_sets', 'id, title');
 		while ($set = $db->fetch_array($query)) {
 			$setArray[$set['id']] = $set['title'];
 		}
@@ -1994,7 +2371,12 @@ function pp_admin_scan()
 			$where .= "{$operator}pid > {$lastPid}";
 		}
 
-		$query = $db->simple_select('posts', 'pid, tid, fid, message', $where, array('limit' => $ppp, 'limit_start' => $start, 'order_by' => 'dateline', 'order_dir', 'ASC'));
+		$query = $db->simple_select('posts', 'pid, tid, fid, message', $where, array(
+			'limit' => $ppp,
+			'limit_start' => $start,
+			'order_by' => 'dateline',
+			'order_dir', 'ASC',
+		));
 
 		$count = $db->num_rows($query);
 		if ($count == 0 ||
@@ -2095,17 +2477,286 @@ EOF;
 	$form_container->output_row_header('&nbsp;', array('width' => '10%'));
 
 	$form_container->output_cell("<label>{$lang->pp_analyze_posted_images}</label><div class=\"description\">{$lang->pp_analyze_posted_images_description}</div>");
-	$form_container->output_cell($form->generate_numeric_field('posts_per_page', $ppp, array('style' => 'width: 150px;', 'min' => 0)));
-	$form_container->output_cell($form->generate_submit_button($lang->go, array('name' => 'analyze_posts', 'class' => 'button_yes', 'id' => 'analyze_submit')));
-	$form_container->output_cell($form->generate_submit_button('Skip for now...', array('name' => 'do_not_analyze_posts', 'class' => 'button_no', 'id' => 'skip_submit')).$form->generate_hidden_field('start', $start).$form->generate_hidden_field('count', $totalCount).$form->generate_hidden_field('in_progress', 1).$form->generate_hidden_field('action', 'scan').$form->generate_hidden_field('fid', $fid).$form->generate_hidden_field('tid', $tid).$form->generate_hidden_field('lastpid', $lastPid));
+
+	$form_container->output_cell($form->generate_numeric_field('posts_per_page', $ppp, array(
+		'style' => 'width: 150px;',
+		'min' => 0,
+	)));
+
+	$form_container->output_cell($form->generate_submit_button($lang->go, array(
+		'name' => 'analyze_posts',
+		'class' => 'button_yes',
+		'id' => 'analyze_submit',
+	)));
+
+	$form_container->output_cell($form->generate_submit_button('Skip for now...', array(
+		'name' => 'do_not_analyze_posts',
+		'class' => 'button_no',
+		'id' => 'skip_submit',
+	)).
+		$form->generate_hidden_field('start', $start).
+		$form->generate_hidden_field('count', $totalCount).
+		$form->generate_hidden_field('in_progress', 1).
+		$form->generate_hidden_field('action', 'scan').
+		$form->generate_hidden_field('fid', $fid).
+		$form->generate_hidden_field('tid', $tid).
+		$form->generate_hidden_field('lastpid', $lastPid)
+	);
+
 	$form_container->construct_row();
-
 	$form_container->end();
-
 	$form->end();
 
 	$page->output_footer();
 	exit;
+}
+
+/**
+ * retrieve redirect info from URL
+ *
+ * @return void
+ */
+function pp_admin_parse_url()
+{
+	global $mybb, $db, $html;
+
+	$errorRedirect = $html->url($mybb->input['from']);
+
+	$url = trim($mybb->input['url']);
+	if ((int) $url <= 0 &&
+		my_strpos($url, $mybb->settings['bburl']) === false) {
+		flash_message('Invalid URL', 'error');
+		admin_redirect($errorRedirect);
+	}
+
+	$url = str_replace($mybb->settings['bburl'], '', $url);
+
+	while (my_strpos($url, '/') === 0) {
+		$url = my_substr($url, 1);
+	}
+
+	$tidPattern = "#^([\d]+)$#";
+	$standardPattern = "#showthread.php\?(pid|tid)=([\d]+)(?:.*?)(?:&pid=([\d]+))?#is";
+	$seoPattern = "#([thread|post])-([\d]+)(?:-page-[\d]+)?(?:-post-([\d]+))?(?:-[a-zA-Z]+)?#is";
+
+	$tid = $pid = 0;
+	if (preg_match($tidPattern, $url, $match)) {
+		$tid = (int) $match[1];
+	} elseif (preg_match($standardPattern, $url, $match)) {
+		$type = 'Standard';
+
+		if ($match[1] == 'tid') {
+			$tid = (int) $match[2];
+			if ((int) $match[3]) {
+				$pid = (int) $match[3];
+			}
+		} else {
+			$pid = (int) $match[2];
+
+			$post = get_post($pid);
+			$tid = $post['tid'];
+			$fid = $post['fid'];
+		}
+	} elseif (preg_match($seoPattern, $url, $match)) {
+		$type = 'Default SEO';
+
+		if ($match[1] == 'thread') {
+			$tid = (int) $match[2];
+		} else {
+			$pid = (int) $match[2];
+
+			$post = get_post($pid);
+			$tid = $post['tid'];
+			$fid = $post['fid'];
+		}
+	} elseif ($mybb->settings['google_seo_url_threads'] &&
+		$db->table_exists('google_seo')) {
+		$type = 'Google SEO';
+
+		$seoPrefix = str_replace('{url}', '', $mybb->settings['google_seo_url_threads']);
+
+		if (strpos($url, $seoPrefix) !== 0) {
+			flash_message('Invalid URL', 'error');
+			admin_redirect($errorRedirect);
+		}
+
+		$url = substr($url, strlen($seoPrefix));
+
+		$urlPieces = explode('?', $url);
+		if (count($urlPieces) > 1) {
+			list($url, $queryString) = $urlPieces;
+
+			if (my_strpos($queryString, '#') !== false) {
+				$queryStringPieces = explode('#', $urlPieces[1]);
+				$queryString = $queryStringPieces[0];
+			}
+
+			$queryStringPieces = explode('&', $queryString);
+			if (count($queryStringPieces) > 0) {
+				foreach ($queryStringPieces as $piece) {
+					$queryPieces = explode('=', $piece);
+					if (count($queryPieces) < 2) {
+						continue;
+					}
+
+					switch ($queryPieces[0]) {
+					case 'tid':
+						$tid = (int) $queryPieces[1];
+						break;
+					case 'pid':
+						$pid = (int) $queryPieces[1];
+						break;
+					}
+
+					if ($tid && $pid) {
+						break;
+					}
+				}
+
+				if ($pid && !$tid) {
+					$post = get_post($pid);
+					$tid = $post['tid'];
+				}
+			}
+		}
+
+		if ($url &&
+			!$tid) {
+			$url = $db->escape_string($url);
+
+			$query = $db->simple_select('google_seo', 'id', "idtype='4' AND url='{$url}'");
+
+			if ($db->num_rows($query) <= 0) {
+				flash_message('Invalid URL', 'error');
+				admin_redirect($errorRedirect);
+			}
+
+			$tid = $db->fetch_field($query, 'id');
+		}
+	}
+
+	if (!$tid) {
+		flash_message('Invalid URL', 'error');
+		admin_redirect($errorRedirect);
+	}
+
+	if (!$fid) {
+		$thread = get_thread($tid);
+		$fid = $thread['fid'];
+	}
+
+	$redirectArray = array(
+		'action' => 'view_thread',
+		'fid' => $fid,
+		'tid' => $tid,
+	);
+
+	$queryWhere = "tid='{$tid}' AND setid='0'";
+
+	$message = 'Redirected to thread...';
+	if ($pid) {
+		$message = 'Redirected to post...';
+		$redirectArray['pid'] = $pid;
+	}
+
+	$query = $db->simple_select('pp_images', 'count(id) as count', $queryWhere);
+	$count = $db->fetch_field($query, 'count');
+
+	if ($count <= 0) {
+		$message = "No images in thread #{$tid}";
+		if ($pid) {
+			$message .= ", Post #{$pid}";
+		}
+
+		flash_message($message, 'error');
+		admin_redirect($errorRedirect);
+	}
+
+	$redirectUrl = $html->url($redirectArray);
+
+	flash_message($message, 'success');
+	admin_redirect($redirectUrl);
+}
+
+/**
+ * update a single images caption
+ *
+ * @return void
+ */
+function pp_admin_update_caption()
+{
+	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
+
+	$id = (int) $mybb->input['id'];
+
+	if (!$id) {
+		flash_message('No Image ID', 'error');
+		admin_redirect($html->url($redirectUrl));
+	}
+
+	$image = new PicturePerfectImage($id);
+	if (!$image->isValid()) {
+		flash_message('Invalid Image ID', 'error');
+		admin_redirect($html->url());
+	}
+
+	$data = $image->get('data');
+	$tid = (int) $data['tid'];
+	$fid = (int) $data['fid'];
+	$mybb->input['page'] = (int) $mybb->input['page'] ? (int) $mybb->input['page'] : 1;
+
+	$redirectArray = array(
+		'action' => 'view_thread',
+		'tid' => $tid,
+		'fid' => $fid,
+		'page' => $mybb->input['page'],
+	);
+
+	if ($mybb->request_method == 'post') {
+		$caption = trim($mybb->input['caption']);
+
+		if (!$caption) {
+			$redirectArray['action'] = 'update_caption';
+
+			flash_message('No caption provided.', 'error');
+			admin_redirect($html->url($redirectArray));
+		}
+
+		$image->set('caption', $caption);
+		if (!$image->save()) {
+			flash_message('Caption could not be updated.', 'error');
+			admin_redirect($html->url($redirectArray));
+		}
+
+		flash_message('Caption updated successfully.', 'success');
+		admin_redirect($html->url($redirectArray));
+	}
+
+	$page->add_breadcrumb_item($lang->pp, $html->url());
+	$page->add_breadcrumb_item('Update Image Caption', $html->url(array('action' => 'update_caption')));
+	$page->add_breadcrumb_item("Update Image Caption (#{$id})");
+
+	$page->output_header("{$lang->pp} - Update Image Caption");
+	pp_output_tabs('pp_update_caption');
+
+	$form = new Form($html->url(array('action' => 'update_caption')), 'post');
+
+	$formContainer = new FormContainer('Update Image Caption');
+
+	$formContainer->output_row('Caption', 'enter a caption here',
+		$form->generate_text_box('caption', $data['caption']).
+		$form->generate_hidden_field('action', 'update_caption').
+		$form->generate_hidden_field('id', $id).$form->generate_hidden_field('tid', $tid).
+		$form->generate_hidden_field('fid', $fid).
+		$form->generate_hidden_field('page', $mybb->input['page'])
+	);
+
+	$formContainer->end();
+	$buttons[] = $form->generate_submit_button('Submit');
+	$form->output_submit_wrapper($buttons);
+	$form->end();
+
+	$page->output_footer();
 }
 
 	/** hook functions **/
@@ -2157,6 +2808,7 @@ function pp_admin_config_permissions(&$admin_permissions)
 	if (!$lang->pp) {
 		$lang->load('pp');
 	}
+
 	$admin_permissions['pp'] = $lang->pp_admin_permissions_desc;
 }
 
@@ -2280,6 +2932,15 @@ function pp_output_tabs($current, $threadTitle='', $tid=0)
 			'description' => 'The thread or forum being scanned already has existing images. You are being asked to confirm whether to delete the existing images and rescan, or to only look for new images.',
 		);
 		break;
+	case 'pp_update_caption':
+		$urlArray = array('action' => 'update_caption', 'id' => $mybb->input['id']);
+
+		$subTabs['pp_update_caption'] = array(
+			'title' => 'Update Image Caption',
+			'link' => $html->url($urlArray),
+			'description' => 'edit caption for posted images',
+		);
+		break;
 	}
 
 	$subTabs['pp_sets'] = array(
@@ -2374,7 +3035,12 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 				$table->construct_cell("<span style=\"{$imageCountStyle}\">{$imageCount}</span>");
 
 				$popup = new PopupMenu("control_{$forum['fid']}", 'Options');
-				$popup->add_item('Scan', $html->url(array('action' => 'scan_center', 'mode' => 'inline', 'fid' => $forum['fid'])));
+				$popup->add_item('Scan', $html->url(array(
+					'action' => 'scan_center',
+					'mode' => 'inline',
+					'fid' => $forum['fid'],
+				)));
+
 				$table->construct_cell($popup->fetch());
 
 				$table->construct_row();
@@ -2417,7 +3083,11 @@ function ppInitiateImageScan($message, $fid=0, $tid=0, $newOnly=false, $deleteFi
 		$db->delete_query('pp_images', $where);
 		$db->delete_query('pp_image_threads', $where);
 	} elseif ($newOnly) {
-		$query = $db->simple_select('pp_images', 'pid', $where, array('order_by' => 'pid', 'order_dir' => 'DESC', 'limit' => 1));
+		$query = $db->simple_select('pp_images', 'pid', $where, array(
+			'order_by' => 'pid',
+			'order_dir' => 'DESC',
+			'limit' => 1,
+		));
 
 		$lastPid = (int) $db->fetch_field($query, 'pid');
 		$where .= " AND pid > {$lastPid}";
@@ -2445,7 +3115,11 @@ function ppAddImagesToTaskList()
 	$selectedCount = count($selected);
 
 	$tid = (int) $mybb->input['tid'];
-	$redirectUrl = $html->url(array('action' => 'view_thread', 'tid' => $tid, 'page' => $mybb->input['page']));
+	$redirectUrl = $html->url(array(
+		'action' => 'view_thread',
+		'tid' => $tid,
+		'page' => $mybb->input['page'],
+	));
 
 	if (!is_array($selected) ||
 		empty($selected)) {

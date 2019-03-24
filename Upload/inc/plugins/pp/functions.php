@@ -185,7 +185,7 @@ function ppFetchRemoteFiles($files)
  * @param string new file name
  * @param int
  * @param int
- * @param int
+ * @param bool
  *
  * returns true upon success and false on failure.
  */
@@ -221,12 +221,20 @@ function ppResizeImage($source, $destination, $width, $height, $crop=false)
 		$h = $height / $ratio;
 		$x = ($w - $width / $ratio) / 2;
 		$w = $width / $ratio;
-	} elseif (	$w > $width ||
-				$h > $height) {
+	} elseif ($w > $width || $h > $height) {
 		$ratio = min($width / $w, $height / $h);
 		$width = $w * $ratio;
 		$height = $h * $ratio;
 		$x = 0;
+	}
+
+	if ($type == 'gif' &&
+		ppIsAnimatedGif($source)) {
+		if (class_exists('Imagick')) {
+			return ppResizeAnimatedGif($source, $destination, $width, $height);
+		}
+
+		return false;
 	}
 
 	$new = @imagecreatetruecolor($width, $height);
@@ -255,6 +263,68 @@ function ppResizeImage($source, $destination, $width, $height, $crop=false)
 		break;
 	}
 	return true;
+}
+
+/**
+ * resize an animated GIF
+ *
+ * @param string file name
+ * @param string new file name
+ * @param int
+ * @param int
+ *
+ * returns true upon success and false on failure.
+ */
+function ppResizeAnimatedGif($source, $destination, $width, $height)
+{
+	$imagick = new Imagick($source);
+
+	$format = $imagick->getImageFormat();
+	if ($format != 'GIF') {
+		return false;
+	}
+
+	$imagick = $imagick->coalesceImages();
+
+	do {
+		$imagick->resizeImage($width, $height, Imagick::FILTER_BOX, 1);
+	} while ($imagick->nextImage());
+
+	$imagick = $imagick->deconstructImages();
+	$imagick->writeImages($destination, true);
+
+	$imagick->clear();
+	$imagick->destroy();
+
+	return true;
+}
+
+/**
+ * detect animated GIF image
+ *
+ * from https://github.com/Sybio/GifFrameExtractor by Clément Guillemain
+ *
+ * @param  string
+ * @return bool
+ */
+function ppIsAnimatedGif($filename)
+{
+	if (!($fh = @fopen($filename, 'rb'))) {
+		return false;
+	}
+
+	$count = 0;
+
+	while (!feof($fh) && $count < 2) {
+		// read 100kb at a time
+		$chunk = fread($fh, 1024 * 100);
+
+		// matches any image data blocks
+		$count += preg_match_all('#\x00\x21\xF9\x04.{4}\x00(\x2C|\x21)#s', $chunk, $matches);
+	}
+
+	fclose($fh);
+	return $count > 1;
 }
 
 /**
@@ -379,64 +449,132 @@ function ppStripQuotes($message)
  * @param  string
  * @return bool success/fail
  */
-function ppReplacePostImage($pid, $currentUrl, $newUrl)
-{
-	global $db;
-
-	$pid = (int) $pid;
-	if (!$pid) {
-		return false;
-	}
-
-	$query = $db->simple_select('posts', 'message', "pid='{$pid}'");
-	if ($db->num_rows($query) <= 0) {
-		return false;
-	}
-
-	$message = $db->fetch_field($query, 'message');
-
-	$message = str_replace($currentUrl, $newUrl, $message);
-
-	$db->update_query('posts', array('message' => $db->escape_string($message)), "pid='{$pid}'");
-
-	return true;
-}
-
-/**
- * remove any image MyCodes in the specified post completely
- *
- * @param  array image info
- * @return bool success/fail
- */
-function ppRemovePostedImage($image)
+function ppReplacePostedImage($image, $replacement, $textReplacement=false, $replaceAll=false)
 {
 	global $db;
 
 	$pid = (int) $image['pid'];
-	if (!$pid) {
-		return false;
+	$url = trim($image['url']);
+	if (!$pid || !$url) {
+		return array(
+			'status' => false,
+			'message' => 'Invalid info passed',
+		);
+	}
+
+	$originalReplacement = $replacement;
+
+	if (!$textReplacement && $replacement) {
+		$replacement = "[img]{$replacement}[/img]";
+	}
+
+	$url = $db->escape_string($url);
+
+	$imageQuery = $db->simple_select('pp_images', '*', "pid='{$pid}' AND url='{$url}'", array(
+		'order_by' => 'id',
+		'oder_dir' => 'ASC',
+	));
+
+	$iCount = $db->num_rows($imageQuery);
+	if ($iCount == 0) {
+		return array(
+			'status' => false,
+			'message' => "No images exist for the specified post. ({$pid})",
+		);
 	}
 
 	$query = $db->simple_select('posts', 'message', "pid='{$pid}'");
 	if ($db->num_rows($query) <= 0) {
-		return false;
+		return array(
+			'status' => false,
+			'message' => "The specified post ({$pid}) does not exist.",
+		);
 	}
 
 	$message = $db->fetch_field($query, 'message');
 
 	$images = ppGetPostImages($message, true);
 
+	$x = 1;
+	$existingImages = array();
+	while ($i = $db->fetch_array($imageQuery)) {
+		$existingImages[$i['id']] = $i;
+		if ($i['id'] == $image['id']) {
+			$position = $x;
+		}
+
+		$x++;
+	}
+
+	$foundCount = 0;
+	$newMessage = '';
+	$thisMessage = $message;
 	foreach($images as $fullCode) {
-		if (strpos($fullCode, $image['url']) === false) {
+		$pos = my_strpos($thisMessage, $fullCode);
+		if ($pos === false) {
+			return array(
+				'status' => false,
+				'message' => "The specified post ({$pid}) does not contain the passed URL. ({$url})",
+			);
+		}
+
+		if (my_strpos($fullCode, $image['url']) === false) {
 			continue;
 		}
 
-		$message = str_replace($fullCode, '', $message);
+		$foundCount++;
+
+		if ($foundCount === $position || $replaceAll) {
+			if ($pos > 0) {
+				$newMessage .= substr($thisMessage, 0, $pos).$replacement;
+			} else {
+				$newMessage .= $replacement;
+			}
+
+			$thisMessage = substr($thisMessage, $pos+my_strlen($fullCode));
+
+			if (!$replaceAll) {
+				break;
+			}
+		} else {
+			if ($pos > 0) {
+				$newMessage .= substr($thisMessage, 0, $pos).$fullCode;
+			} else {
+				$newMessage .= $fullCode;
+			}
+
+			$thisMessage = substr($thisMessage, $pos+my_strlen($fullCode));
+		}
 	}
 
-	$db->update_query('posts', array('message' => $db->escape_string($message)), "pid='{$pid}'");
+	if ($thisMessage) {
+		$newMessage .= $thisMessage;
+	}
 
-	return strpos($image['url'], $message) === false;
+	$db->update_query('posts', array('message' => $db->escape_string($newMessage)), "pid='{$pid}'");
+
+	$affected = array();
+	if ($replaceAll) {
+		foreach ($existingImages as $id => $data) {
+			$i = new PicturePerfectImage($data);
+
+			if (!$originalReplacement || $textReplacement) {
+				$i->remove();
+			} else {
+				$i->set('url', $originalReplacement);
+				$i->save();
+			}
+
+			if (!in_array($id, $affected)) {
+				$affected[] = $id;
+			}
+		}
+	}
+
+	return array(
+		'status' => true,
+		'affected' => $affected,
+	);
 }
 
 /**

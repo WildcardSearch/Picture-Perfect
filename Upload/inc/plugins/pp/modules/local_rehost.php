@@ -21,7 +21,7 @@ function pp_local_rehost_info()
 		'pageAction' => 'view_local_rehost',
 		'imageLimit' => 12,
 		'createsSet' => false,
-		'version' => '1.0',
+		'version' => '1.0.1',
 		'settings' => array(
 			'path' => array(
 				'title' => 'Path',
@@ -107,9 +107,6 @@ function pp_local_rehost_process_images($images, $settings)
 			continue;
 		}
 
-		$uniqueID = uniqid();
-		$baseName = "{$image['tid']}-{$image['pid']}-{$uniqueID}";
-
 		// if an extension isn't specified, keep the original
 		$ext = $image['extension'];
 		if ($settings['format']) {
@@ -122,37 +119,44 @@ function pp_local_rehost_process_images($images, $settings)
 			$ext = 'png';
 		}
 
+		$baseName = ppBuildRehostBaseName($path, $ext);
 		$filename = "{$path}/{$baseName}.{$ext}";
 
-		$image['image'] = @imagecreatefromstring($image['content']);
+		if ($settings['format'] &&
+			$settings['format'] != $ext) {
+			$image['image'] = @imagecreatefromstring($image['content']);
 
-		if (!$image['image'] ||
-			!is_resource($image['image'])) {
-			$fail++;
-			continue;
+			if (!$image['image'] ||
+				!is_resource($image['image'])) {
+				$fail++;
+				continue;
+			}
+
+			switch ($ext) {
+			case 'bmp':
+				@imagewbmp($image['image'], $filename);
+				break;
+			case 'gif':
+				@imagegif($image['image'], $filename);
+				break;
+			case 'jpg':
+				@imagejpeg($image['image'], $filename);
+				break;
+			case 'png':
+				@imagepng($image['image'], $filename);
+				break;
+			default:
+				$fail++;
+				continue;
+			}
+
+			// clean up
+			@imagedestroy($image['image']);
+		} else {
+			file_put_contents($filename, $image['content']);
 		}
 
-		switch ($ext) {
-		case 'bmp':
-			@imagewbmp($image['image'], $filename);
-			break;
-		case 'gif':
-			@imagegif($image['image'], $filename);
-			break;
-		case 'jpg':
-			@imagejpeg($image['image'], $filename);
-			break;
-		case 'png':
-			@imagepng($image['image'], $filename);
-			break;
-		default:
-			$fail++;
-			continue;
-		}
-
-		// clean up
 		@unlink($image['tmp_url']);
-		@imagedestroy($image['image']);
 
 		// now swap the image URL in the post
 		if ($domain == $mybb->settings['bburl']) {
@@ -207,6 +211,26 @@ function pp_local_rehost_process_images($images, $settings)
 		'redirect' => $redirectInfo,
 		'messages' => $messages,
 	);
+}
+
+
+/**
+ * build a unique filename for an image that is at least 4 chars long
+ *
+ * @param  string
+ * @param  string
+ * @return array
+ */
+function ppBuildRehostBaseName($path, $ext='png')
+{
+	$goodChars = array_merge(range('a', 'z'), range('A', 'Z'), range('0', '9'));
+
+	$filename = '';
+	while (strlen($filename) < 4 || file_exists("{$path}/{$filename}.{$ext}")) {
+		$filename .= $goodChars[rand(0, count($goodChars) - 1)];
+	}
+
+	return $filename;
 }
 
 ?>
