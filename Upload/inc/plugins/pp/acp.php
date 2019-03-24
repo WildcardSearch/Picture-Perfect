@@ -809,7 +809,12 @@ EOF;
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("pp_inline_ids[{$id}]", 1);
 	}
-	echo $form->generate_hidden_field('tid', $tid).$form->generate_hidden_field('fid', $fid).$form->generate_hidden_field('page', $mybb->input['page']);
+
+	echo(
+		$form->generate_hidden_field('tid', $tid).
+		$form->generate_hidden_field('fid', $fid).
+		$form->generate_hidden_field('page', $mybb->input['page'])
+	);
 
 	$form->end();
 	echo('<br />');
