@@ -1399,7 +1399,7 @@ EOF;
 	$newTaskLink = $html->link($newTaskUrl, 'Add a new image task', array(
 		'style' => 'font-weight: bold;',
 		'title' => 'Add a new image task',
-		'icon' => "styles/{$cp_style}/images/asb/add.png",
+		'icon' => "styles/{$cp_style}/images/pp/add.png",
 	), array(
 		'alt' => '+',
 		'style' => 'margin-bottom: -3px;',
@@ -1768,7 +1768,7 @@ EOF;
 	$newTaskLink = $html->link($newTaskUrl, 'Add a new image task list', array(
 		'style' => 'font-weight: bold;',
 		'title' => 'Add a new image task list',
-		'icon' => "styles/{$cp_style}/images/asb/add.png"
+		'icon' => "styles/{$cp_style}/images/pp/add.png"
 	), array(
 		'alt' => '+',
 		'style' => 'margin-bottom: -3px;',
