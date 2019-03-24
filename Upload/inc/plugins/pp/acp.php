@@ -1632,7 +1632,6 @@ EOF;
 	$table->construct_header('Title', array('width' => '25%'));
 	$table->construct_header('Description', array('width' => '25%'));
 	$table->construct_header('Images', array('width' => '5%'));
-	$table->construct_header('Location', array('width' => '15%'));
 	$table->construct_header('Status', array('width' => '10%'));
 	$table->construct_header($form->generate_check_box('', '', '', array('id' => 'pp_select_all')), array('style' => 'width: 1%'));
 
@@ -1695,7 +1694,7 @@ EOF;
 	}
 
 	if (empty($taskLists)) {
-		$table->construct_cell('nothing yet', array('colspan' => 7));
+		$table->construct_cell('nothing yet', array('colspan' => 6));
 		$table->construct_row();
 	}
 
