@@ -7,7 +7,7 @@
  * wrapper for image info
  */
 
-class PicturePerfectImage extends StorableObject010000
+class PicturePerfectImage extends StorableObject010001
 {
 	protected $setid = 0;
 	protected $pid = 0;
