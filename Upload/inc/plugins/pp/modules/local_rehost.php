@@ -165,7 +165,7 @@ function pp_local_rehost_process_images($images, $settings)
 			$url = "{$domain}/{$baseName}.{$ext}";
 		}
 
-		if (!ppReplacePostImage($image['pid'], $image['url'], $url)) {
+		if (!ppReplacePostedImage($image['pid'], $image['url'], $url)) {
 			$fail++;
 		} else {
 			$success++;
