@@ -115,7 +115,7 @@ function pp_imgur_rehost_process_images($images, $settings)
 		$url = $info['link'];
 
 		// now replace the image URL in the post
-		if (!ppReplacePostedImage($image['pid'], $image['url'], $url)) {
+		if (!ppReplacePostedImage($image, $url)) {
 			$fail++;
 			continue;
 		} else {
