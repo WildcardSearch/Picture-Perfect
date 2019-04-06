@@ -25,22 +25,42 @@ function pp_imgur_rehost_info()
 		'createsSet' => false,
 		'version' => '1.0',
 		'settings' => array(
+			'anonymous' => array(
+				'title' => 'Upload Anonymously?',
+				'description' => 'YES (default) to upload anonymously (requires <span style="font-weight: bold; font-family: courier new;">Imgur Application Client ID</span>), NO to upload to an account designated by your application (requires <span style="font-weight: bold; font-family: courier new;">Imgur Application Access Token</span>)',
+				'optionscode' => 'yesno',
+				'value' => 1,
+			),
+			'clientId' => array(
+				'title' => 'Imgur Application Client ID',
+				'description' => 'in order to use this module, you must first register an application with Imgur and receive a client ID to be used for anonymous upload',
+				'optionscode' => 'text',
+				'value' => $mybb->settings['pp_clientId'],
+			),
 			'accessToken' => array(
 				'title' => 'Imgur Application Access Token',
-				'description' => 'in order to use this module, you must first register an application with Imgur and receive an access token to be used for anonymous upload',
+				'description' => 'in order to use this module, you must first register an application with Imgur and receive an access token to be used for upload to the designated Imgur account',
 				'optionscode' => 'text',
 				'value' => $mybb->settings['pp_accessToken'],
 			),
 		),
 		'installData' => array(
 			'settings' => array(
+				'pp_clientId' => array(
+					'name' => 'pp_clientId',
+					'title' => 'Imgur Application Client ID',
+					'description' => 'in order to use this module, you must first register an application with Imgur and receive a client ID to be used for anonymous upload',
+					'optionscode' => 'text',
+					'value' => '',
+					'disporder' => '100'
+				),
 				'pp_accessToken' => array(
 					'name' => 'pp_accessToken',
 					'title' => 'Imgur Application Access Token',
 					'description' => 'in order to use this module, you must first register an application with Imgur and receive an access token to be used for anonymous upload',
 					'optionscode' => 'text',
 					'value' => '',
-					'disporder' => '100'
+					'disporder' => '110'
 				),
 			),
 		),
@@ -164,6 +184,18 @@ function ppImgurRehost($url, $settings)
 		return false;
 	}
 
+	if ($settings['anonymous'] &&
+		isset($settings['clientId']) &&
+		$settings['clientId']) {
+		$auth = "Client-ID {$settings['clientId']}";
+	} elseif (!$settings['anonymous'] &&
+		isset($settings['accessToken']) &&
+		$settings['accessToken']) {
+		$auth = "Bearer {$settings['accessToken']}";
+	} else {
+		return false;
+	}
+
 	$boundary = 'PicturePerfect000020';
 
 	$curl = curl_init();
@@ -179,7 +211,7 @@ function ppImgurRehost($url, $settings)
 		CURLOPT_CUSTOMREQUEST => "POST",
 		CURLOPT_POSTFIELDS => "--{$boundary}\r\nContent-Disposition: form-data; name=\"image\"\r\n\r\n{$url}\r\n--{$boundary}--",
 		CURLOPT_HTTPHEADER => array(
-			"Authorization: Bearer {$settings['accessToken']}",
+			"Authorization: {$auth}",
 			"cache-control: no-cache",
 			"content-type: multipart/form-data; boundary={$boundary}",
 		),
