@@ -1072,10 +1072,7 @@ function pp_admin_edit_set()
 		}
 
 		flash_message($lang->pp_edit_set_success_message, 'success');
-		admin_redirect($html->url(array(
-			'action' => 'view_set',
-			'id' => $id,
-		)));
+		admin_redirect($html->url(array('action' => 'sets')));
 	}
 
 	$form = new Form($html->url(array(
