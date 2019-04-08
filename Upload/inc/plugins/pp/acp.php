@@ -707,6 +707,7 @@ EOF;
 			$imageClass = ' localImage';
 		}
 
+		$cacheBuster = "?dateline={$image['dateline']}";
 		$postUrl = get_post_link($image['pid']);
 		$postUrl = "{$mybb->settings['bburl']}/{$postUrl}#pid{$image['pid']}";
 		$postLink = $html->link($postUrl, 'Post Link', array('target' => '_blank'));
@@ -757,7 +758,7 @@ EOF;
 		$imageElement = <<<EOF
 <div class="imageContainer">
 	<label class="checkContainer" for="{$checkId}">
-		<div class="thumbnail{$imageClass}" style="background-image: url({$image['url']}), url(styles/{$cp_style}/images/pp/bad-image.png);">
+		<div class="thumbnail{$imageClass}" style="background-image: url({$image['url']}{$cacheBuster}), url(styles/{$cp_style}/images/pp/bad-image.png);">
 			<input id="{$checkId}" type="checkbox" name="pp_inline_ids[{$id}]" value="" class="checkbox_input pp_check" />
 			<span class="checkmark"></span>
 			<div class="domain-label" title="{$domainTitle}" style="font-size: {$fs}em;">{$basePiece}</div>
@@ -1222,13 +1223,13 @@ EOF;
 		$images[$image['id']] = $image;
 	}
 
-	$cacheBuster = '?dateline='.TIME_NOW;
 	foreach ($images as $id => $image) {
 		$imageClass = '';
 		if (strpos($image['url'], $mybb->settings['bburl']) !== false) {
 			$imageClass = ' localImage';
 		}
 
+		$cacheBuster = "?dateline={$image['dateline']}";
 		$imageElement = $html->img($image['url'].$cacheBuster, array('class' => "thumbnail{$imageClass}"));
 
 		$table->construct_cell($form->generate_check_box("pp_inline_ids[{$id}]", '', $imageElement, array('class' => 'pp_check')), array('class' => 'ppImage'), array('class' => 'ppImage'));
