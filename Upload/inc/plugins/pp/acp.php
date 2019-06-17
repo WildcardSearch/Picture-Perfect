@@ -700,17 +700,28 @@ EOF;
 		$baseDomain = $mybb->settings['bburl'];
 	}
 
+	$postNumbers = array();
+	$query = $db->simple_select('posts', 'pid', "tid='{$tid}'", array('order_by' => 'pid', 'order_dir' => 'ASC'));
+	$pn = 1;
+	while ($pid = $db->fetch_field($query, 'pid')) {
+		$postNumbers[$pid] = $pn;
+		$pn++;
+	}
+
 	$iCount = 0;
+	$postNumber = 1;
 	foreach ($images as $id => $image) {
+		$pid = $image['pid'];
+
 		$imageClass = '';
 		if (strpos($image['url'], $baseDomain) !== false) {
 			$imageClass = ' localImage';
 		}
 
 		$cacheBuster = "?dateline={$image['dateline']}";
-		$postUrl = get_post_link($image['pid']);
-		$postUrl = "{$mybb->settings['bburl']}/{$postUrl}#pid{$image['pid']}";
-		$postLink = $html->link($postUrl, 'Post Link', array('target' => '_blank'));
+		$postUrl = get_post_link($pid);
+		$postUrl = "{$mybb->settings['bburl']}/{$postUrl}#pid{$pid}";
+		$postLink = $html->link($postUrl, "#{$postNumbers[$pid]}", array('target' => '_blank'));
 
 		$imageLink = $html->link($image['url'], 'Image Link', array('target' => '_blank'));
 
