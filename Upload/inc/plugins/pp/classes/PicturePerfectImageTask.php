@@ -7,7 +7,7 @@
  * wrapper for image info
  */
 
-class PicturePerfectImageTask extends StorableObject010000
+class PicturePerfectImageTask extends StorableObject010001
 {
 	protected $lid = 0;
 	protected $pid = 0;

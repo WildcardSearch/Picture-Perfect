@@ -340,7 +340,7 @@ function ppInstallTask()
             "title" => 'Picture Perfect Image Tasks',
             "file" => 'pp_image_tasks',
             "description" => 'processes image task lists and processes images according to user settings',
-            "minute" => '0,9,19,29,39,49,59',
+            "minute" => '9,19,29,39,49,59',
             "hour" => '*',
             "day" => '*',
             "weekday" => '*',

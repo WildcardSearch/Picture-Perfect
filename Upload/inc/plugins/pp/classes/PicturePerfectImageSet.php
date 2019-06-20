@@ -7,7 +7,7 @@
  * wrapper for image info
  */
 
-class PicturePerfectImageSet extends StorableObject010000
+class PicturePerfectImageSet extends StorableObject010001
 {
 	protected $title = '';
 	protected $description = '';

@@ -4,7 +4,7 @@
  * ConfigurableModule Class Structure
  */
 
-abstract class ConfigurableModule010100 extends ExternalModule020100 implements ConfigurableModuleInterface010000
+abstract class ConfigurableModule010101 extends ExternalModule020100 implements ConfigurableModuleInterface010000
 {
 	/**
 	 * @var array
@@ -31,7 +31,7 @@ abstract class ConfigurableModule010100 extends ExternalModule020100 implements 
 
 		foreach ($module->settings as $name => $setting) {
 			$setting['name'] = $name;
-			ConfigurableModule010010::buildSetting($setting, $form, $formContainer);
+			ConfigurableModule010101::buildSetting($setting, $form, $formContainer);
 		}
 
 		return true;
@@ -272,7 +272,7 @@ abstract class ConfigurableModule010100 extends ExternalModule020100 implements 
 	 */
 	public function outputSettings($formContainer)
 	{
-		ConfigurableModule010010::outputModuleSettings($this, $formContainer);
+		ConfigurableModule010101::outputModuleSettings($this, $formContainer);
 	}
 }
 

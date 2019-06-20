@@ -7,7 +7,7 @@
  * module wrapper
  */
 
-class PicturePerfectModule extends InstallableModule010000
+class PicturePerfectModule extends InstallableModule010001
 {
 	/**
 	 * @var the path
