@@ -324,9 +324,6 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	protected function getCacheVersion()
 	{
 		$version = $this->cacheData['version'];
-		if ($this->cacheSubKey) {
-			$version = $this->cacheData[$this->cacheSubKey]['version'];
-		}
 
 		return $version ? $version : 0;
 	}
@@ -340,12 +337,11 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	{
 		$cache = $this->cache->read($this->cacheKey);
 
+		$this->cacheData['version'] = $this->version;
 		if ($this->cacheSubKey) {
-			$this->cacheData[$this->cacheSubKey]['version'] = $this->version;
-			$cache[$this->cacheSubKey] = $this->cacheData;
+			$cache[$this->cacheSubKey][$this->baseName] = $this->cacheData;
 		} else {
-			$this->cacheData['version'] = $this->version;
-			$cache = $this->cacheData;
+			$cache[$this->baseName] = $this->cacheData;
 		}
 
 		$this->cache->update($this->cacheKey, $cache);
@@ -360,9 +356,9 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	{
 		$data = $this->cache->read($this->cacheKey);
 		if ($this->cacheSubKey) {
-			unset($data[$this->cacheSubKey]);
+			unset($data[$this->cacheSubKey][$this->baseName]);
 		} else {
-			unset($data);
+			unset($data[$this->baseName]);
 		}
 
 		$this->cache->update($this->cacheKey, $data);
