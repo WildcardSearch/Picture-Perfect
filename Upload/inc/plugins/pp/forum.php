@@ -7,9 +7,7 @@
  * forum routines
  */
 
-if (!defined('PP_INITIALIZED')) {
-	ppInitialize();
-}
+ppInitialize();
 
 /**
  * delete image information when a post is deleted
@@ -188,8 +186,6 @@ function ppNewPost()
  */
 function ppInitialize()
 {
-	define('PP_INITIALIZED', 1);
-
 	global $plugins, $mybb;
 
 	switch (THIS_SCRIPT) {
