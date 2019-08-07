@@ -14,6 +14,7 @@ if (!defined('IN_MYBB')) {
 
 define('PICTURE_PERFECT_VERSION', '0.0.8');
 define('PICTURE_PERFECT_MOD_URL', MYBB_ROOT.'inc/plugins/pp/modules');
+define('PICTURE_PERFECT_HOST_URL', MYBB_ROOT.'inc/plugins/pp/hosts');
 
 // register custom class autoloader
 spl_autoload_register('ppClassAutoLoad');

@@ -12,16 +12,14 @@
  *
  * @return void
  */
-function pp_local_rehost_info()
+function pp_host_local_info()
 {
 	return array(
 		'title' => 'Local Rehosts',
 		'description' => 'rehost posted images to a location on this server',
-		'actionPhrase' => 'Rehost Images Locally',
-		'pageAction' => 'view_local_rehost',
+		'actionPhrase' => 'Rehost Locally',
 		'imageLimit' => 12,
-		'createsSet' => false,
-		'version' => '1.0.1',
+		'version' => '1',
 		'settings' => array(
 			'path' => array(
 				'title' => 'Path',
@@ -54,12 +52,22 @@ EOF
 }
 
 /**
+ * ensure required settings are available
+ *
+ * @return bool
+ */
+function pp_host_local_validate_install()
+{
+	return true;
+}
+
+/**
  * process images
  *
  * @param  array
  * @return void
  */
-function pp_local_rehost_process_images($images, $settings)
+function pp_host_local_upload($images, $settings)
 {
 	global $html, $mybb, $lang;
 

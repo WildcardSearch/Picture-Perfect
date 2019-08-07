@@ -30,7 +30,7 @@ function pp_admin()
 		return false;
 	}
 
-	global $mybb, $lang, $html, $min, $modules;
+	global $mybb, $lang, $html, $min, $modules, $hosts;
 	if (!$lang->pp) {
 		$lang->load('pp');
 	}
@@ -40,9 +40,10 @@ function pp_admin()
 	}
 
 	// URL, link and image markup generator
-	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'pid', 'addon', 'pp_inline_ids'));
+	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'pid', 'addon', 'pp_inline_ids', 'host'));
 
 	$modules = ppGetAllModules();
+	$hosts = ppGetAllHosts();
 
 	// if there is an existing function for the action
 	$pageFunction = 'pp_admin_'.$mybb->input['action'];
@@ -310,7 +311,7 @@ EOF;
  */
 function pp_admin_view_thread()
 {
-	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules;
+	global $mybb, $db, $page, $lang, $html, $min, $cp_style, $modules, $hosts;
 
 	$perPage = 12;
 	$selected = $mybb->input['pp_inline_ids'];
@@ -745,12 +746,28 @@ EOF;
 		$popup = new PopupMenu("control_{$id}", 'Options');
 
 		foreach ((array) $modules as $addon => $module) {
+			if ($addon === 'rehost') {
+				continue;
+			}
+
 			$popup->add_item($module->get('actionPhrase'), $html->url(array(
 				'action' => 'process_images',
 				'mode' => 'configure',
 				'addon' => $addon,
 				'pp_inline_ids' => array($id),
 			)));
+		}
+
+		if (!empty($hosts)) {
+			foreach ((array) $hosts as $addon => $host) {
+				$popup->add_item($host->get('actionPhrase'), $html->url(array(
+					'action' => 'process_images',
+					'mode' => 'configure',
+					'host' => $addon,
+					'addon' => 'rehost',
+					'pp_inline_ids' => array($id),
+				)));
+			}
 		}
 
 		$popup->add_item('Update Caption', $html->url(array(
@@ -1512,7 +1529,7 @@ EOF;
  */
 function pp_admin_edit_image_task()
 {
-	global $mybb, $db, $page, $lang, $html, $min, $modules;
+	global $mybb, $db, $page, $lang, $html, $min, $modules, $hosts;
 
 	$data = array();
 	$id = (int) $mybb->input['id'];
@@ -1523,8 +1540,65 @@ function pp_admin_edit_image_task()
 
 	if ($mybb->request_method == 'post') {
 		$module = $modules[$mybb->input['addon']];
-
 		$redirectUrl = $html->url(array('action' => 'image_task_lists', 'page' => $mybb->input['page']));
+
+		$rehost = $hostConfig = false;
+		$baseName = $module->get('baseName');
+		if ($baseName === 'rehost') {
+			if (empty($hosts)) {
+				flash_message('no image hosts installed', 'error');
+				admin_redirect($redirectUrl);
+			}
+
+			if ($mybb->input['mode'] == 'host-config') {
+				if (!isset($hosts[$mybb->input['host']])) {
+					flash_message('no image hosts installed', 'error');
+					admin_redirect($redirectUrl);
+				}
+
+				$host = $hosts[$mybb->input['host']];
+				$module->set('settings', $host->get('settings'));
+				$module->hasSettings = true;
+
+				$mybb->input['mode'] = 'configure';
+				$hostConfig = true;
+			} elseif ($mybb->input['mode'] == 'configure') {
+				$hostList = '';
+				foreach ((array) $hosts as $name => $host) {
+					$hostList .= "{$name}={$host->get('actionPhrase')}\n";
+				}
+
+				$setting = array(
+					'title' => $module->get('actionPhrase'),
+					'description' => 'select an image host',
+					'optionscode' => "select\n{$hostList}",
+					'value' => $name,
+				);
+
+				$module->set('settings', array('host' => $setting));
+				$module->hasSettings = true;
+			} else {
+				if (!isset($hosts[$mybb->input['host']])) {
+					flash_message('no image hosts installed', 'error');
+					admin_redirect($redirectUrl);
+				}
+
+				$host = $hosts[$mybb->input['host']];
+
+				$allSettings = $host->get('settings');
+				$allSettings['host'] = array(
+					'title' => $module->get('actionPhrase'),
+					'description' => 'select an image host',
+					'optionscode' => "text",
+					'value' => $mybb->input['host'],
+				);
+
+				$module->set('settings', $allSettings);
+				$module->hasSettings = true;
+			}
+
+			$rehost = true;
+		}
 
 		if ($mybb->input['mode'] == 'configure') {
 			$page->add_breadcrumb_item('Configure Image Task');
@@ -1557,13 +1631,22 @@ function pp_admin_edit_image_task()
 
 			$module->outputSettings($formContainer);
 
+			$modeInput = '';
+			if ($rehost) {
+				if ($hostConfig) {
+					$modeInput = $form->generate_hidden_field('host', $mybb->input['host']);
+				} else {
+					$modeInput = $form->generate_hidden_field('mode', 'host-config');
+				}
+			}
+
 			echo(
 				$form->generate_hidden_field('id', $id).
 				$form->generate_hidden_field('addon', $mybb->input['addon']).
 				$form->generate_hidden_field('title', $mybb->input['title']).
 				$form->generate_hidden_field('description', $mybb->input['description']).
 				$form->generate_hidden_field('task_order', $mybb->input['task_order']).
-				$form->generate_hidden_field('setid', $mybb->input['setid'])
+				$form->generate_hidden_field('setid', $mybb->input['setid']).$modeInput
 			);
 
 			$formContainer->end();
@@ -2111,9 +2194,11 @@ function pp_admin_process_images()
 {
 	global $mybb, $db, $page, $lang, $html, $min;
 
+	$tid = (int) $mybb->input['tid'];
+
 	$redirectUrl = $html->url(array(
 		'action' => 'view_thread',
-		'tid' => $mybb->input['tid'],
+		'tid' => $tid,
 		'fid' => $mybb->input['fid'],
 		'page' => $mybb->input['page'],
 	));
@@ -2179,14 +2264,26 @@ function pp_admin_process_images()
 		admin_redirect($redirectUrl);
 	}
 
+	$isHost = false;
+	$hostSettings = array();
+	if ($module->get('baseName') === 'rehost') {
+		$imageHost = $mybb->input['host'];
+		if (!$imageHost) {
+			$settings = $task->get('settings');
+			$imageHost = $settings['host'];
+		}
+
+		if ($imageHost) {
+			$host = new PicturePerfectImageHost($imageHost);
+
+			if ($host->isValid()) {
+				$isHost = true;
+			}
+		}
+	}
+
 	$selected = $mybb->input['pp_inline_ids'];
 	$selectedCount = count($selected);
-
-	$tid = (int) $mybb->input['tid'];
-	$redirectUrl = $html->url(array(
-		'action' => 'view_thread',
-		'tid' => $tid,
-	));
 
 	if (!is_array($selected) ||
 		empty($selected)) {
@@ -2224,19 +2321,33 @@ function pp_admin_process_images()
 			$images[$image['id']] = $image;
 		}
 
+		$settings = array();
 		if ($doTask) {
 			$settings = $task->get('settings');
+			$module->set('settings', $settings);
+
+			$info = $module->processImages($images, $settings);
+		} elseif ($isHost) {
+			foreach ($host->get('settings') as $name => $setting) {
+				$settings[$name] = $setting['value'];
+				if (isset($mybb->input[$name])) {
+					$settings[$name] = $mybb->input[$name];
+				}
+			}
+
+			$settings['host'] = $host->get('baseName');
+
+			$info = $module->processImages($images, $settings);
 		} else {
-			$settings = array();
 			foreach ($module->get('settings') as $name => $setting) {
 				$settings[$name] = $setting['value'];
 				if (isset($mybb->input[$name])) {
 					$settings[$name] = $mybb->input[$name];
 				}
 			}
-		}
 
-		$info = $module->processImages($images, $settings);
+			$info = $module->processImages($images, $settings);
+		}
 
 		foreach ((array) $info['messages'] as $m) {
 			flash_message($m['message'], $m['status']);
@@ -2298,6 +2409,15 @@ EOF;
 	}
 
 	$module->outputSettings($formContainer);
+
+	if ($isHost &&
+		$host->hasSettings) {
+		$formContainer->output_row('Host Settings', 'settings for the chosen image host', '');
+
+		$host->outputSettings($formContainer);
+
+		echo $form->generate_hidden_field('host', $host->get('baseName'));
+	}
 
 	foreach ((array) $selected as $id => $throwAway) {
 		echo $form->generate_hidden_field("pp_inline_ids[{$id}]", 1);

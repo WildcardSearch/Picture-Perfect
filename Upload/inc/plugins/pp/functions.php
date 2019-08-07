@@ -657,4 +657,61 @@ function ppValidateDomain($domain)
 	return true;
 }
 
+function ppBuildHostListSetting()
+{
+	$hosts = ppGetAllHosts();
+
+	$options = '';
+	foreach ((array) $hosts as $host => $module) {
+		if (!$module->isValid()) {
+			continue;
+		}
+
+		$options .= "\n{$host}={$module->title}{$sep}";
+	}
+
+	if (empty($options)) {
+		return;
+	}
+
+	return <<<EOF
+select{$options}
+EOF;
+}
+
+/**
+ * retrieve any detected modules
+ *
+ * @return array PicturePerfectModule
+ */
+function ppGetAllHosts()
+{
+	$returnArray = array();
+
+	// load all detected modules
+	foreach (new DirectoryIterator(PICTURE_PERFECT_HOST_URL) as $file) {
+		if (!$file->isFile() ||
+			$file->isDot() ||
+			$file->isDir()) {
+			continue;
+		}
+
+		$extension = pathinfo($file->getFilename(), PATHINFO_EXTENSION);
+
+		// only PHP files
+		if ($extension != 'php') {
+			continue;
+		}
+
+		// extract the baseName from the module file name
+		$filename = $file->getFilename();
+		$module = substr($filename, 0, strlen($filename) - 4);
+
+		// attempt to load the module
+		$returnArray[$module] = new PicturePerfectImageHost($module);
+	}
+
+	return $returnArray;
+}
+
 ?>

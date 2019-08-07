@@ -12,15 +12,14 @@
  *
  * @return void
  */
-function pp_imgur_rehost_info()
+function pp_host_imgur_info()
 {
 	global $mybb;
 
 	return array(
 		'title' => 'Imgur Rehosts',
 		'description' => 'rehost posted images to Imgur',
-		'actionPhrase' => 'Rehost Images to Imgur',
-		'pageAction' => 'view_imgur_rehost',
+		'actionPhrase' => 'Rehost to Imgur',
 		'imageLimit' => 12,
 		'createsSet' => false,
 		'version' => '1.0',
@@ -68,12 +67,27 @@ function pp_imgur_rehost_info()
 }
 
 /**
+ * ensure required settings are available
+ *
+ * @return bool
+ */
+function pp_host_imgur_validate_install()
+{
+	global $mybb;
+
+	return (isset($mybb->settings['pp_clientId']) &&
+		!empty($mybb->settings['pp_clientId'])) ||
+		(isset($mybb->settings['pp_accessToken']) &&
+		!empty($mybb->settings['pp_accessToken']));
+}
+
+/**
  * process images
  *
  * @param  array
  * @return void
  */
-function pp_imgur_rehost_process_images($images, $settings)
+function pp_host_imgur_upload($images, $settings)
 {
 	global $html, $mybb, $lang;
 
