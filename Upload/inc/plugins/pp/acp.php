@@ -476,7 +476,18 @@ div.imageLinks {
 }
 
 div.imageDimensions {
+	display: block;
 	font-size: .90em;
+}
+
+span.pp-image-http {
+	color: darkred;
+	text-shadow: red 1px 1px 3px;
+}
+
+span.pp-image-https {
+	color: darkgreen;
+	text-shadow: #32cd32 1px 1px 3px;
 }
 
 div.captionRow {
@@ -783,6 +794,13 @@ EOF;
 
 		$checkId = "imageCheck_{$id}";
 
+		$secureText = 'http';
+		$secureClass = 'pp-image-http';
+		if ($image['secureimage']) {
+			$secureText = 'https';
+			$secureClass = 'pp-image-https';
+		}
+
 		$imageElement = <<<EOF
 <div class="imageContainer">
 	<label class="checkContainer" for="{$checkId}">
@@ -797,7 +815,7 @@ EOF;
 			{$postLink} | {$imageLink}
 		</div>
 		<div class="infoRow imageDimensions">
-			<span>Width: 0px | Height: 0px;</span>
+			<span>0x0 | </span><span class="{$secureClass}">{$secureText}</span>
 		</div>
 		<div class="infoRow captionRow">
 			<input class="captionInput" type="text" name="image_captions[{$id}]" value="{$image['caption']}" placeholder="Your caption here..." title="{$image['caption']}" />
