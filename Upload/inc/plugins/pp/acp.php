@@ -477,7 +477,6 @@ div.imageLinks {
 
 div.imageDimensions {
 	display: block;
-	font-size: .90em;
 }
 
 span.pp-image-http {
@@ -707,7 +706,8 @@ EOF;
 		$images[$image['id']] = $image;
 	}
 
-	$baseDomain = ppGetBaseDomain($mybb->settings['bburl']);
+	$urlInfo = parse_url($mybb->settings['bburl']);
+	$baseDomain = $urlInfo['host'];
 	if (!$baseDomain) {
 		$baseDomain = $mybb->settings['bburl'];
 	}
@@ -739,19 +739,32 @@ EOF;
 
 		$urlInfo = parse_url($image['url']);
 
-		$basePiece = $urlInfo['host'];
-		$trimmed = ppGetBaseDomain($urlInfo['host']);
-		if ($trimmed) {
-			$basePiece = $trimmed;
-		}
+		$basePiece = str_replace('www.', '', $urlInfo['host']);
 
 		$domainTitle = htmlspecialchars_uni($basePiece);
 
 		$domainLength = my_strlen($basePiece);
 		$fs = 1;
+		if ($domainLength > 24) {
+			$domArray = explode('.', $basePiece);
+			$pieceCount = count($domArray);
+
+			if ($pieceCount > 2) {
+				$middlePiece = floor($pieceCount / 2) - 1;
+
+				$firstPiece = implode('.', array_slice($domArray, 0, $middlePiece+1));
+				$secondPiece = implode('.', array_slice($domArray, $middlePiece+1));
+
+				$domArray[$middlePiece] .= "<br />";
+				$basePiece = implode('.', $domArray);
+
+				$domainLength = (int) max(strlen($firstPiece), strlen($secondPiece)) * 1.5;
+			}
+		}
+
 		if ($domainLength > 10) {
 			$fs = (float) ($domainLength - 10) * 0.03;
-			$fs = 1 - ($fs);
+			$fs = max(.3, 1 - ($fs));
 		}
 
 		$popup = new PopupMenu("control_{$id}", 'Options');
