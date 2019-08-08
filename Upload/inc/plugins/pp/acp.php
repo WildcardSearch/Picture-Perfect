@@ -2518,12 +2518,18 @@ function pp_admin_scan()
 			foreach ((array) ppGetPostImages($post['message']) as $source) {
 				$threadCache["{$post['fid']}-{$post['tid']}"]++;
 
+				$secure = false;
+				if (substr($source, 0, 5) === 'https') {
+					$secure = true;
+				}
+
 				$insert_arrays[] = array(
 					'setid' => 0,
 					'pid' => (int) $post['pid'],
 					'tid' => (int) $post['tid'],
 					'fid' => (int) $post['fid'],
 					'url' => $source,
+					'secureimage' => $secure,
 					'dateline' => TIME_NOW,
 				);
 			}

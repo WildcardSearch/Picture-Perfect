@@ -25,6 +25,7 @@ $tables = array(
 			'url' => 'TEXT NOT NULL',
 			'original_url' => 'TEXT',
 			'caption' => 'TEXT',
+			'secureimage' => 'INT',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
 		'pp_image_sets' => array(
@@ -70,6 +71,7 @@ $tables = array(
 		'url' => 'TEXT NOT NULL',
 		'original_url' => 'TEXT',
 		'caption' => 'TEXT',
+		'secureimage' => 'INT(1)',
 		'dateline' => 'INT(10)',
 	),
 	'pp_image_sets' => array(
@@ -82,7 +84,7 @@ $tables = array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
 		'lid' => 'INT(10)',
 		'pid' => 'INT(10)',
-		'setid' => 'INT(1)',
+		'setid' => 'INT(10)',
 		'title' => 'TEXT',
 		'description' => 'TEXT',
 		'addon' => 'TEXT NOT NULL',
