@@ -13,7 +13,7 @@ $tables = array(
 			'id' => 'SERIAL',
 			'tid' => 'INT NOT NULL',
 			'fid' => 'INT NOT NULL',
-			'image_count' => 'INT',
+			'image_count' => 'INT DEFAULT 0',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
 		'pp_images' => array(
@@ -28,13 +28,13 @@ $tables = array(
 
 			'caption' => 'TEXT',
 
-			'imagechecked' => 'INT',
-			'width' => 'INT',
-			'height' => 'INT',
-			'filesize' => 'INT',
+			'imagechecked' => 'INT DEFAULT 0',
+			'width' => 'INT DEFAULT 0',
+			'height' => 'INT DEFAULT 0',
+			'filesize' => 'INT DEFAULT 0',
 
-			'deadimage' => 'INT',
-			'secureimage' => 'INT',
+			'deadimage' => 'INT DEFAULT 0',
+			'secureimage' => 'INT DEFAULT 0',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
 		'pp_image_sets' => array(
@@ -52,7 +52,7 @@ $tables = array(
 			'description' => 'TEXT',
 			'addon' => 'TEXT NOT NULL',
 			'settings' => 'TEXT',
-			'task_order' => 'INT',
+			'task_order' => 'INT DEFAULT 0',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
 		'pp_image_task_lists' => array(
@@ -60,7 +60,7 @@ $tables = array(
 			'title' => 'TEXT',
 			'description' => 'TEXT',
 			'images' => 'TEXT',
-			'active' => 'INT',
+			'active' => 'INT DEFAULT 0',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
 	),
@@ -68,7 +68,7 @@ $tables = array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
 		'tid' => 'INT(10) NOT NULL',
 		'fid' => 'INT(10) NOT NULL',
-		'image_count' => 'INT(10)',
+		'image_count' => 'INT(10) DEFAULT 0',
 		'dateline' => 'INT(10)',
 	),
 	'pp_images' => array(
@@ -83,13 +83,13 @@ $tables = array(
 
 		'caption' => 'TEXT',
 
-		'imagechecked' => 'INT(1)',
-		'width' => 'INT(10)',
-		'height' => 'INT(10)',
-		'filesize' => 'INT(10)',
+		'imagechecked' => 'INT(1) DEFAULT 0',
+		'width' => 'INT(10) DEFAULT 0',
+		'height' => 'INT(10) DEFAULT 0',
+		'filesize' => 'INT(10) DEFAULT 0',
 
-		'deadimage' => 'INT(1)',
-		'secureimage' => 'INT(1)',
+		'deadimage' => 'INT(1) DEFAULT 0',
+		'secureimage' => 'INT(1) DEFAULT 0',
 
 		'dateline' => 'INT(10)',
 	),
@@ -108,7 +108,7 @@ $tables = array(
 		'description' => 'TEXT',
 		'addon' => 'TEXT NOT NULL',
 		'settings' => 'TEXT',
-		'task_order' => 'INT(10)',
+		'task_order' => 'INT(10) DEFAULT 0',
 		'dateline' => 'INT(10) NOT NULL',
 	),
 	'pp_image_task_lists' => array(
@@ -116,7 +116,7 @@ $tables = array(
 		'title' => 'TEXT',
 		'description' => 'TEXT',
 		'images' => 'TEXT',
-		'active' => 'INT(1)',
+		'active' => 'INT(1) DEFAULT 0',
 		'dateline' => 'INT(10) NOT NULL',
 	),
 );
