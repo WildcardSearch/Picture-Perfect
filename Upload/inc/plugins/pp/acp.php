@@ -40,7 +40,7 @@ function pp_admin()
 	}
 
 	// URL, link and image markup generator
-	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'pid', 'addon', 'pp_inline_ids', 'host'));
+	$html = new HTMLGenerator010001(PICTURE_PERFECT_URL, array('ajax', 'fid', 'pid', 'addon', 'pp_inline_ids', 'host', 'task'));
 
 	$modules = ppGetAllModules();
 	$hosts = ppGetAllHosts();
@@ -639,6 +639,7 @@ EOF;
 	<strong>Process Images:</strong>&nbsp;
 	<select name="task">{$options}
 		<option value="caption">Update Captions</option>
+		<option value="reset_images">Update Image Info</option>
 	</select>
 	<input type="submit" class="pp_inline_submit button" name="pp_inline_task" value="{$lang->go} ({$selectedCount})"/>
 	<input type="button" class="pp_inline_clear button" name="pp_inline_clear" value="{$lang->clear}"/>
@@ -810,6 +811,15 @@ EOF;
 		$popup->add_item('Update Caption', $html->url(array(
 			'action' => 'update_caption',
 			'id' => $id,
+			'tid' => $tid,
+			'fid' => $fid,
+			'page' => $mybb->input['page'],
+		)));
+
+		$popup->add_item('Update Image Info', $html->url(array(
+			'action' => 'process_images',
+			'task' => 'reset_images',
+			'pp_inline_ids' => array($id),
 			'tid' => $tid,
 			'fid' => $fid,
 			'page' => $mybb->input['page'],
@@ -2300,6 +2310,41 @@ function pp_admin_process_images()
 
 		flash_message($message, $status);
 		admin_redirect($redirectUrl);
+	} elseif ($mybb->input['task'] == 'reset_images') {
+		if (empty($mybb->input['pp_inline_ids'])) {
+			flash_message('No selected images', 'error');
+			admin_redirect($redirectUrl);
+		}
+
+		$success = $fail = 0;
+		foreach ($mybb->input['pp_inline_ids'] as $id => $throwAway) {
+			$i = new PicturePerfectImage($id);
+			if (!$i->isValid()) {
+				$fail++;
+			} else {
+				$i->set('imagechecked', false);
+				if (!$i->save()) {
+					$fail++;
+				} else {
+					$success++;
+				}
+			}
+		}
+
+		$status = 'success';
+		$message = "fetching info for {$success} image(s)";
+		if ($fail) {
+			if ($success) {
+				$message .= "; {$fail} image(s) failed.";
+				$status = '';
+			} else {
+				$message = "{$fail} image(s) failed.";
+				$status = 'error';
+			}
+		}
+
+		flash_message($message, $status);
+		admin_redirect($redirectUrl);
 	}
 
 	$doTask = false;
@@ -2969,8 +3014,9 @@ function pp_admin_set_image_data()
 				continue;
 			}
 
+			$data['deadimage'] = $data['deadimage'] === "true" ? true : $data['deadimage'] === true ? true : false;
+			$data['imagechecked'] = true;
 			$image->set($data);
-			$image->set('imagechecked', true);
 
 			if ($image->save()) {
 				$affectedImages++;
