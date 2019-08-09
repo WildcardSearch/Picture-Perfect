@@ -22,9 +22,18 @@ $tables = array(
 			'pid' => 'INT NOT NULL',
 			'tid' => 'INT NOT NULL',
 			'fid' => 'INT NOT NULL',
+
 			'url' => 'TEXT NOT NULL',
 			'original_url' => 'TEXT',
+
 			'caption' => 'TEXT',
+
+			'imagechecked' => 'INT',
+			'width' => 'INT',
+			'height' => 'INT',
+			'filesize' => 'INT',
+
+			'deadimage' => 'INT',
 			'secureimage' => 'INT',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
@@ -68,10 +77,20 @@ $tables = array(
 		'pid' => 'INT(10) NOT NULL',
 		'tid' => 'INT(10) NOT NULL',
 		'fid' => 'INT(10) NOT NULL',
+
 		'url' => 'TEXT NOT NULL',
 		'original_url' => 'TEXT',
+
 		'caption' => 'TEXT',
+
+		'imagechecked' => 'INT(1)',
+		'width' => 'INT(10)',
+		'height' => 'INT(10)',
+		'filesize' => 'INT(10)',
+
+		'deadimage' => 'INT(1)',
 		'secureimage' => 'INT(1)',
+
 		'dateline' => 'INT(10)',
 	),
 	'pp_image_sets' => array(

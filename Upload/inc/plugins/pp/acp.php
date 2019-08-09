@@ -359,6 +359,7 @@ function pp_admin_view_thread()
 
 	// set up the page header
 	$page->extra_header .= <<<EOF
+	<script type="text/javascript" src="jscripts/pp/pp.js"></script>
 	<script type="text/javascript" src="jscripts/pp/inline{$min}.js"></script>
 	<script type="text/javascript">
 	<!--
@@ -479,11 +480,13 @@ div.imageDimensions {
 	display: block;
 }
 
+span.pp-dead-image,
 span.pp-image-http {
 	color: darkred;
 	text-shadow: red 1px 1px 3px;
 }
 
+span.pp-good-image,
 span.pp-image-https {
 	color: darkgreen;
 	text-shadow: #32cd32 1px 1px 3px;
@@ -725,12 +728,22 @@ EOF;
 	foreach ($images as $id => $image) {
 		$pid = $image['pid'];
 
+		$checkedClass = '';
+		if (!$image['imagechecked']) {
+			$checkedClass = ' pp-image-unchecked';
+		}
+
 		$imageClass = '';
 		if (strpos($image['url'], $baseDomain) !== false) {
 			$imageClass = ' localImage';
 		}
 
-		$cacheBuster = "?dateline={$image['dateline']}";
+		$cbSep = '?';
+		if (strpos($image['url'], '?') !== false) {
+			$cbSep = '&amp;';
+		}
+
+		$cacheBuster = "{$cbSep}dateline={$image['dateline']}";
 		$postUrl = get_post_link($pid);
 		$postUrl = "{$mybb->settings['bburl']}/{$postUrl}#pid{$pid}";
 		$postLink = $html->link($postUrl, "#{$postNumbers[$pid]}", array('target' => '_blank'));
@@ -814,10 +827,26 @@ EOF;
 			$secureClass = 'pp-image-https';
 		}
 
+		$statusText = 'good';
+		$statusClass = 'pp-good-image';
+		if ($image['deadimage']) {
+			$statusText = 'dead';
+			$statusClass = 'pp-dead-image';
+		}
+
+		$width = $height = '?';
+		if ($image['width']) {
+			$width = $image['width'];
+		}
+
+		if ($image['height']) {
+			$height = $image['height'];
+		}
+
 		$imageElement = <<<EOF
 <div class="imageContainer">
 	<label class="checkContainer" for="{$checkId}">
-		<div class="thumbnail{$imageClass}" style="background-image: url({$image['url']}{$cacheBuster}), url(styles/{$cp_style}/images/pp/bad-image.png);">
+		<div class="thumbnail{$imageClass}{$checkedClass}" style="background-image: url('{$image['url']}{$cacheBuster}'), url(styles/{$cp_style}/images/pp/bad-image.png);" data-imageid="{$id}" data-url="{$image['url']}">
 			<input id="{$checkId}" type="checkbox" name="pp_inline_ids[{$id}]" value="" class="checkbox_input pp_check" />
 			<span class="checkmark"></span>
 			<div class="domain-label" title="{$domainTitle}" style="font-size: {$fs}em;">{$basePiece}</div>
@@ -827,8 +856,8 @@ EOF;
 		<div class="infoRow imageLinks">
 			{$postLink} | {$imageLink}
 		</div>
-		<div class="infoRow imageDimensions">
-			<span>0x0 | </span><span class="{$secureClass}">{$secureText}</span>
+		<div id="image-advanced-info-{$id}" class="infoRow imageDimensions">
+			<span class="pp-image-dimensions">{$width}x{$height}</span> | <span class="pp-image-security {$secureClass}">{$secureText}</span> | <span class="pp-image-status {$statusClass}">{$statusText}</span>
 		</div>
 		<div class="infoRow captionRow">
 			<input class="captionInput" type="text" name="image_captions[{$id}]" value="{$image['caption']}" placeholder="Your caption here..." title="{$image['caption']}" />
@@ -2923,6 +2952,35 @@ function pp_admin_update_caption()
 	$form->end();
 
 	$page->output_footer();
+}
+
+function pp_admin_set_image_data()
+{
+	global $mybb;
+
+	$ret = false;
+
+	$affectedImages = 0;
+	if (!empty($mybb->input['imagedata'])) {
+		foreach ($mybb->input['imagedata'] as $id => $data) {
+			$image = new PicturePerfectImage($id);
+
+			if (!$image->isValid()) {
+				continue;
+			}
+
+			$image->set($data);
+			$image->set('imagechecked', true);
+
+			if ($image->save()) {
+				$affectedImages++;
+			}
+		}
+
+		$ret = ($affectedImages > 0);
+	}
+
+	ppOutputJson($ret);
 }
 
 	/** hook functions **/

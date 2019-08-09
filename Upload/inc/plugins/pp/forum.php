@@ -254,24 +254,4 @@ function ppXmlhttpGetImages()
 	ppOutputJson($data);
 }
 
-/**
- * output a value as JSON to the browser
- *
- * @param  mixed
- * @return void
- */
-function ppOutputJson($data)
-{
-	$json = json_encode($data);
-
-	if (!$json) {
-		return false;
-	}
-
-	// send our headers.
-	header('Content-type: application/json');
-	echo($json);
-	exit;
-}
-
 ?>
