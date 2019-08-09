@@ -340,12 +340,18 @@ function ppStorePostedImages($pid, $tid, $fid, $message)
 
 	$insert_arrays = array();
 	foreach((array) ppGetPostImages($message) as $source) {
+		$secure = false;
+		if (substr($source, 0, 5) === 'https') {
+			$secure = true;
+		}
+
 		$insert_arrays[] = array(
 			'setid' => 0,
 			'pid' => (int) $pid,
 			'tid' => (int) $tid,
 			'fid' => (int) $fid,
 			'url' => $db->escape_string($source),
+			'secureimage' => $secure,
 			'dateline' => TIME_NOW,
 		);
 	}
