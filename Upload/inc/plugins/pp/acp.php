@@ -804,6 +804,7 @@ EOF;
 					'host' => $addon,
 					'addon' => 'rehost',
 					'pp_inline_ids' => array($id),
+					'page' => $mybb->input['page'],
 				)));
 			}
 		}
@@ -2430,8 +2431,6 @@ function pp_admin_process_images()
 		if ($doTask) {
 			$settings = $task->get('settings');
 			$module->set('settings', $settings);
-
-			$info = $module->processImages($images, $settings);
 		} elseif ($isHost) {
 			foreach ($host->get('settings') as $name => $setting) {
 				$settings[$name] = $setting['value'];
@@ -2441,8 +2440,6 @@ function pp_admin_process_images()
 			}
 
 			$settings['host'] = $host->get('baseName');
-
-			$info = $module->processImages($images, $settings);
 		} else {
 			foreach ($module->get('settings') as $name => $setting) {
 				$settings[$name] = $setting['value'];
@@ -2450,9 +2447,9 @@ function pp_admin_process_images()
 					$settings[$name] = $mybb->input[$name];
 				}
 			}
-
-			$info = $module->processImages($images, $settings);
 		}
+
+		$info = $module->processImages($images, $settings);
 
 		foreach ((array) $info['messages'] as $m) {
 			flash_message($m['message'], $m['status']);
