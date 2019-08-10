@@ -621,7 +621,7 @@ EOF;
 	)), 'post');
 
 	$taskQuery = $db->simple_select('pp_image_tasks', '*', "pid='0'", array(
-		'order_by' => 'title',
+		'order_by' => 'task_order',
 		'order_dir' => 'ASC',
 	));
 
