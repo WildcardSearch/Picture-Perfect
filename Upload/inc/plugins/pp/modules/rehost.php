@@ -34,14 +34,6 @@ function pp_rehost_process_images($images, $settings)
 {
 	global $html, $mybb, $lang;
 
-	// set up redirect
-	$tid = $images[key($images)]['tid'];
-	$redirectInfo = array(
-		'action' => 'view_thread',
-		'tid' => $tid,
-		'page' => $mybb->input['page'],
-	);
-
 	$fail = true;
 	if (!empty($settings['host'])) {
 		$host = new PicturePerfectImageHost($settings['host']);
@@ -53,8 +45,13 @@ function pp_rehost_process_images($images, $settings)
 
 	if ($fail) {
 		return array(
-			'redirect' => $redirectInfo,
-			'messages' => 'invalid host',
+			'redirect' => null,
+			'messages' => array(
+				array(
+					'status' => 'error',
+					'message' => 'invalid host',
+				),
+			),
 		);
 	}
 

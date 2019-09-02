@@ -61,14 +61,10 @@ function pp_replace_process_images($images, $settings)
 
 	// set up redirect
 	$tid = $images[key($images)]['tid'];
-	$redirectInfo = array(
-		'action' => 'view_thread',
-		'tid' => $tid,
-	);
+	$from = trim($mybb->input['from']);
+	$fromId = (int) $mybb->input['fromid'];
 
-	if ($mybb->input['page'] > 1) {
-		$redirectInfo['page'] = $mybb->input['page'];
-	}
+	$redirectInfo = ppBuildRedirectUrlArray($fromId, $from);
 
 	$url = trim($settings['url']);
 
@@ -84,7 +80,7 @@ function pp_replace_process_images($images, $settings)
 		$thing = 'Image';
 	}
 
-	$done = array();
+	$done = $failed = array();
 	foreach ($images as $id => $image) {
 		if (in_array($id, $done)) {
 			continue;
@@ -92,11 +88,6 @@ function pp_replace_process_images($images, $settings)
 
 		$info = ppReplacePostedImage($image, $url, $settings['text_replacement'], $settings['replace_all']);
 		if ($info['status'] === true) {
-			$messages[] = array(
-				'status' => 'success',
-				'message' => "{$thing} {$action} successfully",
-			);
-
 			if ($action == 'replaced' && !$settings['replace_all'] && !$settings['text_replacement']) {
 				// update the image
 				$image['original_url'] = $image['url'];
@@ -115,14 +106,12 @@ function pp_replace_process_images($images, $settings)
 
 			$done[] = $id;
 		} else {
-			$messages[] = array(
-				'status' => 'error',
-				'message' => "{$thing} could not be {$action}: {$info['message']}",
-			);
+			$failed[] = $id;
 		}
 	}
 
-	if ($adjustImageCount) {
+	if ($adjustImageCount &&
+		$redirectArray['action'] == 'view_thread') {
 		$threadQuery = $db->simple_select('pp_images', 'COUNT(id) as image_count', "tid='{$tid}'");
 		$iCount = (int) $db->fetch_field($threadQuery, 'image_count');
 
@@ -148,15 +137,18 @@ function pp_replace_process_images($images, $settings)
 	}
 
 	$dCount = count($done);
+	$fCount = count($failed);
 	if ($dCount) {
 		$messages[] = array(
 			'status' => 'success',
-			'message' => "{$dCount} images affected.",
+			'message' => "{$dCount} {$thing}(s) {$action} successfully",
 		);
-	} else {
+	}
+
+	if ($fCount) {
 		$messages[] = array(
-			'status' => 'error',
-			'message' => "0 images affected.",
+			'status' => 'success',
+			'message' => "{$fCount} {$thing}(s) could not be {$action} successfully",
 		);
 	}
 

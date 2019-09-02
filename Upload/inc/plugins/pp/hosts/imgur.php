@@ -93,11 +93,7 @@ function pp_host_imgur_upload($images, $settings)
 
 	// set up redirect
 	$tid = $images[key($images)]['tid'];
-	$redirectInfo = array(
-		'action' => 'view_thread',
-		'tid' => $tid,
-		'page' => $mybb->input['page'],
-	);
+	$redirectInfo = null;
 
 	// main loop - process the images
 	$fail = $success = 0;

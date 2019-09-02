@@ -73,11 +73,7 @@ function pp_host_local_upload($images, $settings)
 
 	// set up redirect
 	$tid = $images[key($images)]['tid'];
-	$redirectInfo = array(
-		'action' => 'view_thread',
-		'tid' => $tid,
-		'page' => $mybb->input['page'],
-	);
+	$redirectInfo = null;
 
 	// build path
 	$domain = $mybb->settings['bburl'];
