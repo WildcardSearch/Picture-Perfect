@@ -143,8 +143,8 @@ function ppFetchRemoteFiles($files, $store=false)
 		curl_setopt($h, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($h, CURLOPT_SSL_VERIFYPEER, false);
 
-		curl_setopt($h, CURLOPT_CONNECTTIMEOUT, 10);
-		curl_setopt($h, CURLOPT_TIMEOUT, 20);
+		curl_setopt($h, CURLOPT_CONNECTTIMEOUT, 30);
+		curl_setopt($h, CURLOPT_TIMEOUT, 30);
 
 		curl_multi_add_handle($multiHandle, $h);
 
@@ -170,11 +170,13 @@ function ppFetchRemoteFiles($files, $store=false)
 		} else {
 			$file['error'] = curl_error($h);
 		}
+
 		curl_multi_remove_handle($multiHandle, $h);
 		curl_close($h);
 
 		$files[$id] = $file;
 	}
+
 	curl_multi_close($multiHandle);
 
 	return $files;

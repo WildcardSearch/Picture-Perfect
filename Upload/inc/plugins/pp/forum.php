@@ -195,63 +195,12 @@ function ppInitialize()
 	case 'newthread.php':
 		$plugins->add_hook('newthread_do_newthread_end', 'ppNewPost');
 		break;
-	case 'xmlhttp.php':
-		$plugins->add_hook('xmlhttp', 'ppXmlhttp');
-		break;
 	}
 
 	$plugins->add_hook('class_moderation_merge_threads', 'ppModerationDoMerge');
 	$plugins->add_hook('class_moderation_delete_post_start', 'ppDeletePost');
 	$plugins->add_hook('class_moderation_delete_thread', 'ppModerationDoDeleteThread');
-	$plugins->add_hook("datahandler_post_update", "ppEditPost");
-}
-
-function ppXmlhttp()
-{
-	global $mybb;
-
-	if ($mybb->input['action'] !== 'pp' ||
-		!trim($mybb->input['mode'])) {
-		return;
-	}
-
-	$function = 'ppXmlhttp'.trim($mybb->input['mode']);
-	if (!function_exists($function)) {
-		return;
-	}
-
-	$function();
-	exit;
-}
-
-function ppXmlhttpGetImages()
-{
-	global $mybb;
-
-	require_once MYBB_ROOT.'inc/plugins/pp/functions_imagefeed.php';
-
-	$ipp = 100;
-	if ((int) $mybb->input['ipp'] > 0) {
-		$ipp = (int) $mybb->input['ipp'];
-	}
-
-	$start = 0;
-	if ((int) $mybb->input['start'] > 0) {
-		$start = (int) $mybb->input['start'];
-	}
-
-	$tid = 0;
-	if ((int) $mybb->input['tid'] > 0) {
-		$tid = (int) $mybb->input['tid'];
-	}
-
-	$sortVal = 'DESC';
-	if ($mybb->input['sort'] === 'ASC') {
-		$sortVal = 'ASC';
-	}
-
-	$data = ppGetImages($tid, $start, $ipp, $sortVal);
-	ppOutputJson($data);
+	$plugins->add_hook('datahandler_post_update', 'ppEditPost');
 }
 
 ?>
