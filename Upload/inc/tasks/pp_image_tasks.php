@@ -95,6 +95,10 @@ function task_pp_image_tasks($task)
 
 		foreach ($imageArray as $imageId) {
 			foreach ($tasks as $key => $data) {
+				if (!$imageId) {
+					continue;
+				}
+
 				$currentTask['images'][$imageId]['tasks'][] = $key;
 			}
 		}
@@ -142,10 +146,21 @@ function task_pp_image_tasks($task)
 
 	$info = $module->processImages($taskImages, $tasks[$thisTask]['settings']);
 
-	$report = '';
-	foreach ((array) $info['messages'] as $m) {
-		$report .= ucfirst($m['status']).': '.$m['message'].'; ';
+	$ids = '';
+	$idArray = array();
+	foreach ($taskImages as $i) {
+		$idArray[] = (int) $i['id'];
 	}
+
+	$ids = implode(',', $idArray);
+
+	$mArray = array();
+	foreach ((array) $info['messages'] as $m) {
+		$mArray[] = ucfirst($m['status']).': '.$m['message'];
+	}
+
+	$messages = implode('; ', $mArray);
+	$report .= "{$messages} ({$ids})";
 
 	$removedIds = array();
 	foreach ($taskImages as $id => $image) {
@@ -174,8 +189,12 @@ function task_pp_image_tasks($task)
 		$tl->save();
 	}
 
-	$currentTask['images'] = $images;
-	$cache->update('current_task', $currentTask);
+	if (empty($images)) {
+		$cache->update('current_task', null);
+	} else {
+		$currentTask['images'] = $images;
+		$cache->update('current_task', $currentTask);
+	}
 
 	// add an entry to the log
 	add_task_log($task, $report);
