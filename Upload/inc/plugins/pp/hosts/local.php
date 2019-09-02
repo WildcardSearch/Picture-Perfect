@@ -180,7 +180,9 @@ function pp_host_local_upload($images, $settings)
 		}
 
 		// save the image
+		$image['original_url'] = $image['url'];
 		$image['url'] = $url;
+		$image['imagechecked'] = false;
 		$newImage = new PicturePerfectImage($image);
 		$newImage->save();
 	}

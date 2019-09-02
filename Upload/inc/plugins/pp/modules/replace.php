@@ -99,7 +99,9 @@ function pp_replace_process_images($images, $settings)
 
 			if ($action == 'replaced' && !$settings['replace_all'] && !$settings['text_replacement']) {
 				// update the image
+				$image['original_url'] = $image['url'];
 				$image['url'] = $url;
+				$image['imagechecked'] = false;
 				$newImage = new PicturePerfectImage($image);
 				$newImage->save();
 			} elseif (!$settings['replace_all']) {

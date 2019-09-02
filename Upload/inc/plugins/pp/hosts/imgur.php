@@ -137,7 +137,9 @@ function pp_host_imgur_upload($images, $settings)
 		}
 
 		// update the image
+		$image['original_url'] = $image['url'];
 		$image['url'] = $url;
+		$image['imagechecked'] = false;
 		$newImage = new PicturePerfectImage($image);
 		$newImage->save();
 	}
