@@ -32,6 +32,8 @@ $tables = array(
 			'width' => 'INT DEFAULT 0',
 			'height' => 'INT DEFAULT 0',
 			'filesize' => 'INT DEFAULT 0',
+			'color_average' => 'TEXT',
+			'color_opposite' => 'TEXT',
 
 			'deadimage' => 'INT DEFAULT 0',
 			'secureimage' => 'INT DEFAULT 0',
@@ -87,6 +89,8 @@ $tables = array(
 		'width' => 'INT(10) DEFAULT 0',
 		'height' => 'INT(10) DEFAULT 0',
 		'filesize' => 'INT(10) DEFAULT 0',
+		'color_average' => 'TEXT',
+		'color_opposite' => 'TEXT',
 
 		'deadimage' => 'INT(1) DEFAULT 0',
 		'secureimage' => 'INT(1) DEFAULT 0',

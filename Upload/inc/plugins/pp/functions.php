@@ -178,6 +178,72 @@ function ppFetchRemoteFiles($files)
 	return $files;
 }
 
+function ppGetImageColorAverage($data=array())
+{
+	if (!is_array($data) ||
+		empty($data)) {
+		return false;
+	}
+
+	if(isset($data['url']) &&
+		!isset($data['content'])) {
+		$data['content'] = file_get_contents($data['url']);
+	}
+
+	if (!isset($data['content']) ||
+		!$data['content']) {
+		return false;
+	}
+
+	$imageAverageHex = '';
+
+	$i = @imagecreatefromstring($data['content']);
+
+	if (!is_resource($i)) {
+		return false;
+	}
+
+	$width = imagesx($i);
+	$height = imagesy($i);
+
+	if (!$width ||
+		!$height) {
+		return false;
+	}
+
+	$resizedImage = imagecreatetruecolor(1, 1);
+	imagecopyresampled($resizedImage, $i, 0, 0, 0, 0, 1, 1, $width, $height);
+
+	$rgb = imagecolorat($resizedImage, 0, 0);
+	$imageAverageHex = ppDecimalToHexColor($rgb);
+
+	$opp = ppGetVisibleColor($rgb);
+	$imageOppositeHex = ppDecimalToHexColor($opp);
+
+	@imagedestroy($i);
+	@imagedestroy($resizedImage);
+
+	return array(
+		'average' => $imageAverageHex,
+		'opposite' => $imageOppositeHex,
+	);
+}
+
+function ppGetVisibleColor($n, $max=16777216)
+{
+	$m = (int) $max / 2;
+	if ($n > $m) {
+		return 0;
+	}
+
+	return 16777215;
+}
+
+function ppDecimalToHexColor($rgb)
+{
+	return str_pad(dechex($rgb), 6, '0', STR_PAD_LEFT);
+}
+
 /**
  * resize image but retain aspect ratio.
  *

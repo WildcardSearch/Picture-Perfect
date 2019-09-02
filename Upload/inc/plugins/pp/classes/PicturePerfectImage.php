@@ -25,6 +25,8 @@ class PicturePerfectImage extends StorableObject010001
 	protected $width = 0;
 	protected $height = 0;
 	protected $filesize = 0;
+	protected $color_average = '';
+	protected $color_opposite = '';
 
 	protected $deadimage = false;
 	protected $secureimage = false;
