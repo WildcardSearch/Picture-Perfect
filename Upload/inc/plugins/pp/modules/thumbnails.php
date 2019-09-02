@@ -85,7 +85,7 @@ function pp_thumbnails_process_images($images, $settings)
 		);
 	}
 
-	$images = ppFetchRemoteFiles($images);
+	$images = ppFetchRemoteFiles($images, true);
 	$images = ppGetImageInfo($images);
 
 	$success = $fail = 0;
