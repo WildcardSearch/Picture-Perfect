@@ -633,7 +633,9 @@ function ppReplacePostedImage($image, $replacement, $textReplacement=false, $rep
 			if (!$originalReplacement || $textReplacement) {
 				$i->remove();
 			} else {
+				$i->set('original_url', $i->get('url'));
 				$i->set('url', $originalReplacement);
+				$i->set('imagechecked', false);
 				$i->save();
 			}
 
