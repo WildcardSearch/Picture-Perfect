@@ -21,6 +21,8 @@ function pp_thumbnails_info()
 		'pageAction' => 'view_thumbnails',
 		'imageLimit' => 12,
 		'createsSet' => true,
+		'contentRequired' => true,
+		'storeImage' => true,
 		'version' => '1.0',
 		'settings' => array(
 			'max_width' => array(
@@ -50,6 +52,8 @@ function pp_thumbnails_process_images($images, $settings)
 	global $html, $mybb, $lang;
 
 	$tid = $images[key($images)]['tid'];
+	$from = trim($mybb->input['from']);
+	$fromId = (int) $mybb->input['fromid'];
 
 	$redirectAction = 'view_set';
 	$redirectMode = '';
@@ -75,10 +79,7 @@ function pp_thumbnails_process_images($images, $settings)
 	if (!file_exists($path) &&
 		@!mkdir($path)) {
 		return array(
-			'redirect' => array(
-				'action' => 'view_thread',
-				'tid' => $tid,
-			),
+			ppBuildRedirectUrlArray($fromId, $from),
 			'messages' => array(
 				'status' => 'error',
 				'message' => 'Image folder could not be created.',
@@ -86,7 +87,6 @@ function pp_thumbnails_process_images($images, $settings)
 		);
 	}
 
-	$images = ppFetchRemoteFiles($images);
 	$images = ppGetImageInfo($images);
 
 	$success = $fail = 0;

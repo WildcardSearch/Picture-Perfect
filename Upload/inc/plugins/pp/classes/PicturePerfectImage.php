@@ -9,15 +9,27 @@
 
 class PicturePerfectImage extends StorableObject010001
 {
+	protected $tableName = 'pp_images';
+
 	protected $setid = 0;
 	protected $pid = 0;
 	protected $tid = 0;
 	protected $fid = 0;
-	protected $caption = '';
+
 	protected $url = '';
 	protected $original_url = '';
 
-	protected $tableName = 'pp_images';
+	protected $caption = '';
+
+	protected $imagechecked = false;
+	protected $width = 0;
+	protected $height = 0;
+	protected $filesize = 0;
+	protected $color_average = '';
+	protected $color_opposite = '';
+
+	protected $deadimage = false;
+	protected $secureimage = false;
 }
 
 ?>

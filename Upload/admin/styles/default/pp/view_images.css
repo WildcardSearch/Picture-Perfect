@@ -1,0 +1,213 @@
+div.pp-forum-jump-form {
+	display: inline;
+	float: right;
+	padding-right: 16px;
+}
+
+div.pp-forum-jump-form input[type=text] {
+	width: 200px;
+}
+
+div.imageContainer {
+	padding: 0px;
+	margin: 0px;
+	border: 1px solid grey;
+
+	width: 320px;
+	height: 156px;
+
+	border-radius: 6px;
+	background: #f2f2f2;
+}
+
+div.imageInfo,
+div.thumbnail,
+div.infoRow,
+div.buttonRow {
+	display: inline-block;
+}
+
+div.thumbnail {
+	height: 150px;
+	width: 150px;
+
+	background-color: lightgrey;
+	background-size: contain;
+	background-position: center;
+	background-repeat: no-repeat;
+
+	border: 4px solid grey;
+	border-radius: 6px 0px 0px 6px;
+
+	text-align: right;
+	vertical-align: top;
+
+	margin-right: 0px;
+	padding: 0px;
+
+	cursor: hand; /* IE */
+	cursor: pointer;
+}
+
+div.thumbnail.localImage {
+	border-color: #32cd32;
+}
+
+div.domain-label {
+	background: rgba(255,255,255,0.5);
+
+	width: 100%;
+	height: 26px;
+	overflow: hidden;
+	text-align: center;
+	top: 124px;
+	position: relative;
+
+	text-shadow:
+		-1px -1px 0 white,
+		1px -1px 0 white,
+		-1px 1px 0 white,
+		1px 1px 0 white;
+
+	border-radius: 0px 0px 0px 2px;
+}
+
+div.imageInfo {
+	padding: 3px 0px 3px 0px;
+
+	margin-left: 0px;
+
+	height: 150px;
+	width: 150px;
+}
+
+div.blankElement {
+	height: 150px;
+	width: 300px;
+}
+
+div.infoRow {
+	padding: 6px;
+	margin-right: 0px;
+	font-size: .95em;
+}
+
+div.pp-image-color-average {
+	padding: 3px 2px 3px 2px;
+	border-radius: 5px;
+	text-align: center;
+	font-weight: bold;
+	font-size: .8em;
+	font-variant: small-caps;
+}
+
+div.buttonRow {
+	padding-top: 16px;
+	padding-left: 85px;
+}
+
+div.image-popup {
+	z-index: 100;
+}
+
+div.imageLinks {
+	border-bottom: 1px solid lightgrey;
+}
+
+div.imageDimensions {
+	display: block;
+}
+
+span.pp-dead-image,
+span.pp-image-http {
+	color: darkred;
+	text-shadow: red 1px 1px 3px;
+}
+
+span.pp-good-image,
+span.pp-image-https {
+	color: darkgreen;
+	text-shadow: #32cd32 1px 1px 3px;
+}
+
+div.captionRow {
+}
+
+input.captionInput {
+	width: 125px;
+	margin-left: 0px;
+	padding: 3px 6px;
+}
+
+input.pp_check {
+	border: 2px inset grey;
+}
+
+span.inlineSubmit {
+	margin-right: 100px;
+}
+
+#pp_select_all,
+#select-all-label {
+	cursor: hand;
+	cursor: pointer;
+}
+
+/** custom checkboxes **/
+
+.checkContainer {
+  position: relative;
+  cursor: pointer;
+  font-size: 22px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.checkContainer input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  top: -104px;
+  left: 120px;
+  height: 25px;
+  width: 25px;
+  background-color: rgba(127, 127, 127, 0.5);
+}
+
+.checkContainer:hover input ~ .checkmark {
+  background-color: rgba(191, 191, 191, 0.75);
+}
+
+.checkContainer input:checked ~ .checkmark {
+  background-color: #2196F3;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkContainer input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkContainer .checkmark:after {
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+}

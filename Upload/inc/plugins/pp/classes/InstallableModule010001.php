@@ -52,6 +52,11 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	protected $uninstallConstant = '';
 
 	/**
+	 * @var string
+	 */
+	protected $debugMode = false;
+
+	/**
 	 * attempt to load and validate the module
 	 *
 	 * @param  string base name of the module to load
@@ -71,9 +76,10 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 			$currentVersion === 0)) {
 			$this->install();
 		// newly updated module
-		} elseif ($currentVersion &&
+		} elseif ($this->debugMode === true ||
+			($currentVersion &&
 			version_compare($currentVersion, $this->version, '<') &&
-			(!$this->uninstallConstant || !defined($this->uninstallConstant) )) {
+			(!$this->uninstallConstant || !defined($this->uninstallConstant) ))) {
 			$this->upgrade();
 		// pre-existing module
 		} else {
@@ -114,7 +120,7 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	 *
 	 * @return bool
 	 */
-	public function install($cleanup = true)
+	public function install($cleanup=true)
 	{
 		if ($this->isInstalled &&
 			$cleanup === true) {
@@ -155,7 +161,7 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	}
 
 	/**
-	 *
+	 * remove/update templates/settings on version bump or debug mode
 	 *
 	 * @return string the return of the module routine
 	 */
@@ -195,7 +201,7 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	}
 
 	/**
-	 *
+	 * install/update module templates
 	 *
 	 * @return string the return of the module routine
 	 */
@@ -230,7 +236,7 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	}
 
 	/**
-	 *
+	 * install/update module settings
 	 *
 	 * @return string the return of the module routine
 	 */
@@ -277,6 +283,7 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	}
 
 	/**
+	 * remove module templates
 	 *
 	 * @return void
 	 */
@@ -286,7 +293,7 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 
 		// remove them all
 		$deleteList = $sep = '';
-		foreach ($this->installData['templates'] as $template) {
+		foreach ((array) $this->installData['templates'] as $template) {
 			$deleteList .= "{$sep}'{$template['title']}'";
 			$sep = ',';
 		}
@@ -297,6 +304,7 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	}
 
 	/**
+	 * remove module settings
 	 *
 	 * @return void
 	 */
@@ -306,7 +314,7 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 
 		// remove them all
 		$deleteList = $sep = '';
-		foreach ($this->installData['settings'] as $setting) {
+		foreach ((array) $this->installData['settings'] as $setting) {
 			$deleteList .= "{$sep}'{$setting['name']}'";
 			$sep = ',';
 		}
@@ -317,22 +325,17 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	}
 
 	/**
-	 * version control
+	 * retrieve cache version
 	 *
 	 * @return string|int version or 0
 	 */
 	protected function getCacheVersion()
 	{
-		$version = $this->cacheData['version'];
-		if ($this->cacheSubKey) {
-			$version = $this->cacheData[$this->cacheSubKey]['version'];
-		}
-
-		return $version ? $version : 0;
+		return $this->cacheData['version'] ? $this->cacheData['version'] : 0;
 	}
 
 	/**
-	 * version control
+	 * update cache version
 	 *
 	 * @return void
 	 */
@@ -340,25 +343,29 @@ abstract class InstallableModule010001 extends ConfigurableModule010101 implemen
 	{
 		$cache = $this->cache->read($this->cacheKey);
 
+		$this->cacheData['version'] = $this->version;
 		if ($this->cacheSubKey) {
-			$this->cacheData[$this->cacheSubKey]['version'] = $this->version;
-			$cache[$this->cacheSubKey] = $this->cacheData;
+			$cache[$this->cacheSubKey][$this->baseName] = $this->cacheData;
 		} else {
-			$this->cacheData['version'] = $this->version;
-			$cache = $this->cacheData;
+			$cache = $this->cacheData[$this->baseName];
 		}
 
 		$this->cache->update($this->cacheKey, $cache);
 	}
 
 	/**
-	 * version control
+	 * clear cache version
 	 *
 	 * @return void
 	 */
 	protected function unsetCacheVersion()
 	{
 		$data = $this->cache->read($this->cacheKey);
+
+		if (!is_array($data)) {
+			$data = array();
+		}
+
 		if ($this->cacheSubKey) {
 			unset($data[$this->cacheSubKey]);
 		} else {

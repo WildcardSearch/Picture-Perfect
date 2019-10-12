@@ -42,7 +42,7 @@ $l['pp_view_thread'] = 'View Thread';
 $l['pp_view_thread_desc'] = 'view images in {1}';
 
 $l['pp_thread'] = 'Thread';
-$l['pp_image_threads'] = 'Image Threads';
+$l['pp_image_threads'] = 'Threads';
 $l['pp_image_count'] = 'Images';
 $l['pp_no_image_threads'] = 'nothing yet';
 $l['pp_images'] = 'Images';
@@ -60,7 +60,13 @@ $l['pp_process_images_finalize_success'] = 'Images processed successfully.{1}';
 $l['pp_process_images_finalize_success_extra'] = ' You may now customize the new image set.';
 $l['pp_process_images_fail_exceed_module_limit'] = 'You have selected more images than this module can process at once. The module limit is {1}';
 
-$l['pp_admin_sets'] = 'View Images Sets';
+$l['pp_image_search'] = 'Search';
+$l['pp_image_search_desc'] = 'search for images using various criterion';
+
+$l['pp_search_results'] = 'Search Results';
+$l['pp_search_results_desc'] = 'view images that match search criteria';
+
+$l['pp_admin_sets'] = 'Images Sets';
 $l['pp_admin_sets_desc'] = 'view and manage image sets';
 $l['pp_no_image_sets'] = 'no image sets yet';
 $l['pp_image_set'] = 'Image Set';
@@ -98,5 +104,13 @@ $l['pp_select_all'] = 'Select All';
 $l['pp_rehost'] = 'Rehost';
 $l['pp_create_thumbnails'] = 'Create Thumbnails';
 $l['pp_rehosted'] = 'Hosted locally';
+
+$l['pp_slideshow_title'] = 'Picture Perfect Slideshow';
+$l['pp_slideshow_description'] = 'create a slideshow from Picture Perfect Image Sets';
+
+$l['pp_slideshow_image_set_id_title'] = 'Picture Perfect Image Set ID';
+$l['pp_slideshow_image_set_id_description'] = 'find it by looking at the Picture Perfect image set listing in ACP';
+
+$l['pp_slideshow_no_content'] = 'no content';
 
 ?>

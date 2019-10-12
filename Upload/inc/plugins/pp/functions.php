@@ -114,6 +114,7 @@ function ppGetImageInfo($images)
 		default:
 			continue;
 		}
+
 		$image['filename'] = pathinfo($image['url'], PATHINFO_FILENAME);
 	}
 
@@ -126,7 +127,7 @@ function ppGetImageInfo($images)
  * @param  array
  * @return array
  */
-function ppFetchRemoteFiles($files)
+function ppFetchRemoteFiles($files, $store=false)
 {
 	if (!is_array($files) ||
 		empty($files)) {
@@ -143,8 +144,8 @@ function ppFetchRemoteFiles($files)
 		curl_setopt($h, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($h, CURLOPT_SSL_VERIFYPEER, false);
 
-		curl_setopt($h, CURLOPT_CONNECTTIMEOUT, 10);
-		curl_setopt($h, CURLOPT_TIMEOUT, 20);
+		curl_setopt($h, CURLOPT_CONNECTTIMEOUT, 30);
+		curl_setopt($h, CURLOPT_TIMEOUT, 30);
 
 		curl_multi_add_handle($multiHandle, $h);
 
@@ -163,19 +164,89 @@ function ppFetchRemoteFiles($files)
 		if ($file['info']['http_code'] == 200) {
 			$file['content'] = curl_multi_getcontent($h);
 
-			$file['tmp_url'] = MYBB_ROOT."images/picture_perfect/temp/temp_{$id}";
-			file_put_contents($file['tmp_url'], $file['content']);
+			if ($store === true) {
+				$file['tmp_url'] = MYBB_ROOT."images/picture_perfect/temp/temp_{$id}";
+				@file_put_contents($file['tmp_url'], $file['content']);
+			}
 		} else {
 			$file['error'] = curl_error($h);
 		}
+
 		curl_multi_remove_handle($multiHandle, $h);
 		curl_close($h);
 
 		$files[$id] = $file;
 	}
+
 	curl_multi_close($multiHandle);
 
 	return $files;
+}
+
+function ppGetImageColorAverage($data=array())
+{
+	if (!is_array($data) ||
+		empty($data)) {
+		return false;
+	}
+
+	if(isset($data['url']) &&
+		!isset($data['content'])) {
+		$data['content'] = file_get_contents($data['url']);
+	}
+
+	if (!isset($data['content']) ||
+		!$data['content']) {
+		return false;
+	}
+
+	$imageAverageHex = '';
+
+	$i = @imagecreatefromstring($data['content']);
+
+	if (!is_resource($i)) {
+		return false;
+	}
+
+	$width = imagesx($i);
+	$height = imagesy($i);
+
+	if (!$width ||
+		!$height) {
+		return false;
+	}
+
+	$resizedImage = imagecreatetruecolor(1, 1);
+	imagecopyresampled($resizedImage, $i, 0, 0, 0, 0, 1, 1, $width, $height);
+
+	$rgb = imagecolorat($resizedImage, 0, 0);
+	$imageAverageHex = ppDecimalToHexColor($rgb);
+
+	$opp = ppGetVisibleColor($rgb);
+	$imageOppositeHex = ppDecimalToHexColor($opp);
+
+	@imagedestroy($i);
+	@imagedestroy($resizedImage);
+
+	return array(
+		'average' => $imageAverageHex,
+		'opposite' => $imageOppositeHex,
+	);
+}
+
+function ppGetVisibleColor($n, $max=16777216)
+{
+	$m = (int) $max / 2;
+	if ($n > $m) {
+		return 0;
+	}
+
+	return 16777215;
+}
+
+function ppDecimalToHexColor($rgb)
+{
+	return str_pad(dechex($rgb), 6, '0', STR_PAD_LEFT);
 }
 
 /**
@@ -340,12 +411,18 @@ function ppStorePostedImages($pid, $tid, $fid, $message)
 
 	$insert_arrays = array();
 	foreach((array) ppGetPostImages($message) as $source) {
+		$secure = false;
+		if (substr($source, 0, 5) === 'https') {
+			$secure = true;
+		}
+
 		$insert_arrays[] = array(
 			'setid' => 0,
 			'pid' => (int) $pid,
 			'tid' => (int) $tid,
 			'fid' => (int) $fid,
 			'url' => $db->escape_string($source),
+			'secureimage' => $secure,
 			'dateline' => TIME_NOW,
 		);
 	}
@@ -561,7 +638,9 @@ function ppReplacePostedImage($image, $replacement, $textReplacement=false, $rep
 			if (!$originalReplacement || $textReplacement) {
 				$i->remove();
 			} else {
+				$i->set('original_url', $i->get('url'));
 				$i->set('url', $originalReplacement);
+				$i->set('imagechecked', false);
 				$i->save();
 			}
 
@@ -655,6 +734,83 @@ function ppValidateDomain($domain)
 	}
 
 	return true;
+}
+
+function ppBuildHostListSetting()
+{
+	$hosts = ppGetAllHosts();
+
+	$options = '';
+	foreach ((array) $hosts as $host => $module) {
+		if (!$module->isValid()) {
+			continue;
+		}
+
+		$options .= "\n{$host}={$module->title}{$sep}";
+	}
+
+	if (empty($options)) {
+		return;
+	}
+
+	return <<<EOF
+select{$options}
+EOF;
+}
+
+/**
+ * retrieve any detected modules
+ *
+ * @return array PicturePerfectModule
+ */
+function ppGetAllHosts()
+{
+	$returnArray = array();
+
+	// load all detected modules
+	foreach (new DirectoryIterator(PICTURE_PERFECT_HOST_URL) as $file) {
+		if (!$file->isFile() ||
+			$file->isDot() ||
+			$file->isDir()) {
+			continue;
+		}
+
+		$extension = pathinfo($file->getFilename(), PATHINFO_EXTENSION);
+
+		// only PHP files
+		if ($extension != 'php') {
+			continue;
+		}
+
+		// extract the baseName from the module file name
+		$filename = $file->getFilename();
+		$module = substr($filename, 0, strlen($filename) - 4);
+
+		// attempt to load the module
+		$returnArray[$module] = new PicturePerfectImageHost($module);
+	}
+
+	return $returnArray;
+}
+
+/**
+ * output a value as JSON to the browser
+ *
+ * @param  mixed
+ * @return void
+ */
+function ppOutputJson($data)
+{
+	$json = json_encode($data);
+
+	if (!$json) {
+		return false;
+	}
+
+	// send our headers.
+	header('Content-type: application/json');
+	echo($json);
+	exit;
 }
 
 ?>

@@ -7,9 +7,7 @@
  * forum routines
  */
 
-if (!defined('PP_INITIALIZED')) {
-	ppInitialize();
-}
+ppInitialize();
 
 /**
  * delete image information when a post is deleted
@@ -188,8 +186,6 @@ function ppNewPost()
  */
 function ppInitialize()
 {
-	define('PP_INITIALIZED', 1);
-
 	global $plugins, $mybb;
 
 	switch (THIS_SCRIPT) {
@@ -204,7 +200,7 @@ function ppInitialize()
 	$plugins->add_hook('class_moderation_merge_threads', 'ppModerationDoMerge');
 	$plugins->add_hook('class_moderation_delete_post_start', 'ppDeletePost');
 	$plugins->add_hook('class_moderation_delete_thread', 'ppModerationDoDeleteThread');
-	$plugins->add_hook("datahandler_post_update", "ppEditPost");
+	$plugins->add_hook('datahandler_post_update', 'ppEditPost');
 }
 
 ?>

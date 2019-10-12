@@ -9,11 +9,17 @@
 
 $tables = array(
 	'pgsql' => array(
+		'pp_image_forums' => array(
+			'id' => 'SERIAL',
+			'fid' => 'INT NOT NULL',
+			'image_count' => 'INT DEFAULT 0',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
 		'pp_image_threads' => array(
 			'id' => 'SERIAL',
 			'tid' => 'INT NOT NULL',
 			'fid' => 'INT NOT NULL',
-			'image_count' => 'INT',
+			'image_count' => 'INT DEFAULT 0',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
 		'pp_images' => array(
@@ -22,9 +28,35 @@ $tables = array(
 			'pid' => 'INT NOT NULL',
 			'tid' => 'INT NOT NULL',
 			'fid' => 'INT NOT NULL',
+
 			'url' => 'TEXT NOT NULL',
 			'original_url' => 'TEXT',
+
 			'caption' => 'TEXT',
+
+			'imagechecked' => 'INT DEFAULT 0',
+			'width' => 'INT DEFAULT 0',
+			'height' => 'INT DEFAULT 0',
+			'filesize' => 'INT DEFAULT 0',
+			'color_average' => 'TEXT',
+			'color_opposite' => 'TEXT',
+
+			'deadimage' => 'INT DEFAULT 0',
+			'secureimage' => 'INT DEFAULT 0',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
+		'pp_image_searches' => array(
+			'id' => 'SERIAL',
+			'title' => 'TEXT',
+			'description' => 'TEXT',
+			'url_comparison_method' => 'INT DEFAULT '.PP_SEARCH_URL_CONTAINS,
+			'url' => 'TEXT',
+			'url_comparison_method' => 'INT DEFAULT '.PP_SEARCH_EITHER,
+			'status' => 'INT DEFAULT '.PP_SEARCH_EITHER,
+			'security_status' => 'INT DEFAULT '.PP_SEARCH_EITHER,
+			'color_average_status' => 'INT DEFAULT '.PP_SEARCH_EITHER,
+			'check_status' => 'INT DEFAULT '.PP_SEARCH_EITHER,
+			'caption_status' => 'INT DEFAULT '.PP_SEARCH_EITHER,
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
 		'pp_image_sets' => array(
@@ -42,7 +74,7 @@ $tables = array(
 			'description' => 'TEXT',
 			'addon' => 'TEXT NOT NULL',
 			'settings' => 'TEXT',
-			'task_order' => 'INT',
+			'task_order' => 'INT DEFAULT 0',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
 		'pp_image_task_lists' => array(
@@ -50,15 +82,21 @@ $tables = array(
 			'title' => 'TEXT',
 			'description' => 'TEXT',
 			'images' => 'TEXT',
-			'active' => 'INT',
+			'active' => 'INT DEFAULT 0',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
+	),
+	'pp_image_forums' => array(
+		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
+		'fid' => 'INT(10) NOT NULL',
+		'image_count' => 'INT(10) DEFAULT 0',
+		'dateline' => 'INT(10)',
 	),
 	'pp_image_threads' => array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
 		'tid' => 'INT(10) NOT NULL',
 		'fid' => 'INT(10) NOT NULL',
-		'image_count' => 'INT(10)',
+		'image_count' => 'INT(10) DEFAULT 0',
 		'dateline' => 'INT(10)',
 	),
 	'pp_images' => array(
@@ -67,9 +105,35 @@ $tables = array(
 		'pid' => 'INT(10) NOT NULL',
 		'tid' => 'INT(10) NOT NULL',
 		'fid' => 'INT(10) NOT NULL',
+
 		'url' => 'TEXT NOT NULL',
 		'original_url' => 'TEXT',
+
 		'caption' => 'TEXT',
+
+		'imagechecked' => 'INT(1) DEFAULT 0',
+		'width' => 'INT(10) DEFAULT 0',
+		'height' => 'INT(10) DEFAULT 0',
+		'filesize' => 'INT(10) DEFAULT 0',
+		'color_average' => 'TEXT',
+		'color_opposite' => 'TEXT',
+
+		'deadimage' => 'INT(1) DEFAULT 0',
+		'secureimage' => 'INT(1) DEFAULT 0',
+
+		'dateline' => 'INT(10)',
+	),
+	'pp_image_searches' => array(
+		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
+		'title' => 'TEXT',
+		'description' => 'TEXT',
+		'url_comparison_method' => 'INT(1) DEFAULT '.PP_SEARCH_URL_CONTAINS,
+		'url' => 'TEXT',
+		'status' => 'INT(1) DEFAULT '.PP_SEARCH_EITHER,
+		'security_status' => 'INT(1) DEFAULT '.PP_SEARCH_EITHER,
+		'color_average_status' => 'INT(1) DEFAULT '.PP_SEARCH_EITHER,
+		'check_status' => 'INT(1) DEFAULT '.PP_SEARCH_EITHER,
+		'caption_status' => 'INT(1) DEFAULT '.PP_SEARCH_EITHER,
 		'dateline' => 'INT(10)',
 	),
 	'pp_image_sets' => array(
@@ -82,12 +146,12 @@ $tables = array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
 		'lid' => 'INT(10)',
 		'pid' => 'INT(10)',
-		'setid' => 'INT(1)',
+		'setid' => 'INT(10)',
 		'title' => 'TEXT',
 		'description' => 'TEXT',
 		'addon' => 'TEXT NOT NULL',
 		'settings' => 'TEXT',
-		'task_order' => 'INT(10)',
+		'task_order' => 'INT(10) DEFAULT 0',
 		'dateline' => 'INT(10) NOT NULL',
 	),
 	'pp_image_task_lists' => array(
@@ -95,7 +159,7 @@ $tables = array(
 		'title' => 'TEXT',
 		'description' => 'TEXT',
 		'images' => 'TEXT',
-		'active' => 'INT(1)',
+		'active' => 'INT(1) DEFAULT 0',
 		'dateline' => 'INT(10) NOT NULL',
 	),
 );

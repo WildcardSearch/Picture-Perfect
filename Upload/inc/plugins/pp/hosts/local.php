@@ -12,16 +12,14 @@
  *
  * @return void
  */
-function pp_local_rehost_info()
+function pp_host_local_info()
 {
 	return array(
 		'title' => 'Local Rehosts',
 		'description' => 'rehost posted images to a location on this server',
-		'actionPhrase' => 'Rehost Images Locally',
-		'pageAction' => 'view_local_rehost',
+		'actionPhrase' => 'Rehost Locally',
 		'imageLimit' => 12,
-		'createsSet' => false,
-		'version' => '1.0.1',
+		'version' => '1',
 		'settings' => array(
 			'path' => array(
 				'title' => 'Path',
@@ -54,22 +52,28 @@ EOF
 }
 
 /**
+ * ensure required settings are available
+ *
+ * @return bool
+ */
+function pp_host_local_validate_install()
+{
+	return true;
+}
+
+/**
  * process images
  *
  * @param  array
  * @return void
  */
-function pp_local_rehost_process_images($images, $settings)
+function pp_host_local_upload($images, $settings)
 {
 	global $html, $mybb, $lang;
 
 	// set up redirect
 	$tid = $images[key($images)]['tid'];
-	$redirectInfo = array(
-		'action' => 'view_thread',
-		'tid' => $tid,
-		'page' => $mybb->input['page'],
-	);
+	$redirectInfo = null;
 
 	// build path
 	$domain = $mybb->settings['bburl'];
@@ -98,7 +102,6 @@ function pp_local_rehost_process_images($images, $settings)
 	$images = ppGetImageInfo($images);
 
 	// main loop - process the images
-	$fail = $success = 0;
 	foreach ($images as $id => $image) {
 		// already local?
 		if (strpos($image['url'], $mybb->settings['bburl']) !== false) {
@@ -122,41 +125,11 @@ function pp_local_rehost_process_images($images, $settings)
 		$baseName = ppBuildRehostBaseName($path, $ext);
 		$filename = "{$path}/{$baseName}.{$ext}";
 
-		if ($settings['format'] &&
-			$settings['format'] != $ext) {
-			$image['image'] = @imagecreatefromstring($image['content']);
+		$result = ppLocalRehostImage($image, $filename, $settings);
 
-			if (!$image['image'] ||
-				!is_resource($image['image'])) {
-				$fail++;
-				continue;
-			}
-
-			switch ($ext) {
-			case 'bmp':
-				@imagewbmp($image['image'], $filename);
-				break;
-			case 'gif':
-				@imagegif($image['image'], $filename);
-				break;
-			case 'jpg':
-				@imagejpeg($image['image'], $filename);
-				break;
-			case 'png':
-				@imagepng($image['image'], $filename);
-				break;
-			default:
-				$fail++;
-				continue;
-			}
-
-			// clean up
-			@imagedestroy($image['image']);
-		} else {
-			file_put_contents($filename, $image['content']);
+		if (!$result) {
+			$fail++;
 		}
-
-		@unlink($image['tmp_url']);
 
 		// now swap the image URL in the post
 		if ($domain == $mybb->settings['bburl']) {
@@ -172,7 +145,9 @@ function pp_local_rehost_process_images($images, $settings)
 		}
 
 		// save the image
+		$image['original_url'] = $image['url'];
 		$image['url'] = $url;
+		$image['imagechecked'] = false;
 		$newImage = new PicturePerfectImage($image);
 		$newImage->save();
 	}
@@ -213,6 +188,81 @@ function pp_local_rehost_process_images($images, $settings)
 	);
 }
 
+function pp_host_local_upload_from_url($url, $filename='')
+{
+	
+}
+
+function pp_host_local_upload_from_base64($url, $filename='')
+{
+	
+}
+
+function pp_host_local_upload_from_form($url, $filename='')
+{
+	if (!is_array($_FILES) ||
+		empty($_FILES)) {
+		return false;
+	}
+
+	foreach ($_FILES as $key => $file) {
+		$result = ppLocalHostCheckUploadedImage($file);
+
+		if (!is_array($result) ||
+			empty($result)) {
+			return false;
+		}
+
+		if (!move_uploaded_file($url, $filename)) {
+			return false;
+		}
+	}
+}
+
+function pp_host_local_upload_from_string($url, $filename='')
+{
+	
+}
+
+function ppLocalRehostImage($image, $filename, $settings)
+{
+	$result = false;
+
+	if ($settings['format'] &&
+		$settings['format'] != $ext) {
+		$i = @imagecreatefromstring($image['content']);
+
+		if (!$i ||
+			!is_resource($i)) {
+			return false;
+		}
+
+		$result = false;
+		switch ($ext) {
+		case 'bmp':
+			$result = @imagewbmp($image['image'], $filename);
+			break;
+		case 'gif':
+			$result = @imagegif($image['image'], $filename);
+			break;
+		case 'jpg':
+			$result = @imagejpeg($image['image'], $filename);
+			break;
+		case 'png':
+			$result = @imagepng($image['image'], $filename);
+			break;
+		}
+
+		// clean up
+		@imagedestroy($image['image']);
+	} else {
+		$bw = file_put_contents($filename, $image['content']);
+
+		$result = $bw > 0;
+	}
+
+	return $result;
+}
 
 /**
  * build a unique filename for an image that is at least 4 chars long
@@ -231,6 +281,52 @@ function ppBuildRehostBaseName($path, $ext='png')
 	}
 
 	return $filename;
+}
+
+/**
+ * check an uploaded image and return info
+ *
+ * @return array
+ */
+function ppLocalHostCheckUploadedImage($file)
+{
+	if (isset($file['error']) &&
+		$file['error'] != UPLOAD_ERR_OK) {
+		switch ($file['error']) {
+		case UPLOAD_ERR_NO_FILE:
+			return 'No file sent.';
+		case UPLOAD_ERR_INI_SIZE:
+		case UPLOAD_ERR_FORM_SIZE:
+			return 'Exceeded filesize limit.';
+		default:
+			return 'Unknown errors.';
+		}
+	}
+
+	$ext = 'png';
+	$finfo = new finfo(FILEINFO_MIME_TYPE);
+	switch ($finfo->file($file['tmp_name'])) {
+	case 'image/gif':
+		$ext = 'gif';
+		break;
+	case 'image/png':
+		$ext = 'png';
+		break;
+	case 'image/x-ms-bmp':
+	case 'image/x-windows-bmp':
+	case 'image/bmp':
+		$ext = 'bmp';
+		break;
+	case 'image/jpeg':
+		$ext = 'jpg';
+		break;
+	default:
+		return 'Invalid file format.';
+	}
+
+	$file['ext'] = $ext;
+
+	return $file;
 }
 
 ?>
