@@ -2638,7 +2638,6 @@ function pp_admin_scan()
 	$tid = (int) $mybb->input['tid'];
 	$lastPid = (int) $mybb->input['lastpid'];
 
-
 	if ($mybb->request_method == 'post') {
 		$threadCache = $cache->read('pp_thread_cache');
 
