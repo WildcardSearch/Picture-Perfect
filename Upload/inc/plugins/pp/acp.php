@@ -3099,9 +3099,9 @@ function pp_admin_set_image_data()
 			$updateArray = array(
 				'width' => (int) $data['width'],
 				'height' => (int) $data['height'],
-				'deadimage' => $data['deadimage'] === "true" || $data['deadimage'] === true ? true : false,
-				'secureimage' => $data['secureimage'] === "true" || $data['secureimage'] === true ? true : false,
-				'imagechecked' => true,
+				'deadimage' => $data['deadimage'] === "true" || $data['deadimage'] === true ? 1 : 0,
+				'secureimage' => $data['secureimage'] === "true" || $data['secureimage'] === true ? 1 : 0,
+				'imagechecked' => 1,
 			);
 
 			$count = $db->update_query('pp_images', $updateArray, "setid=0 AND url='{$eUrl}'");
