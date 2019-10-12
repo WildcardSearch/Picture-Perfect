@@ -9,6 +9,12 @@
 
 $tables = array(
 	'pgsql' => array(
+		'pp_image_forums' => array(
+			'id' => 'SERIAL',
+			'fid' => 'INT NOT NULL',
+			'image_count' => 'INT DEFAULT 0',
+			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
+		),
 		'pp_image_threads' => array(
 			'id' => 'SERIAL',
 			'tid' => 'INT NOT NULL',
@@ -79,6 +85,12 @@ $tables = array(
 			'active' => 'INT DEFAULT 0',
 			'dateline' => 'INT NOT NULL, PRIMARY KEY(id)',
 		),
+	),
+	'pp_image_forums' => array(
+		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',
+		'fid' => 'INT(10) NOT NULL',
+		'image_count' => 'INT(10) DEFAULT 0',
+		'dateline' => 'INT(10)',
 	),
 	'pp_image_threads' => array(
 		'id' => 'INT(10) NOT NULL AUTO_INCREMENT PRIMARY KEY',

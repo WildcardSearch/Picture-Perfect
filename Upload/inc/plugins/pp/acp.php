@@ -2702,7 +2702,7 @@ function pp_admin_scan()
 		}
 
 		if ($done) {
-			$insert_arrays = array();
+			$forumCounts = $insert_arrays = array();
 
 			foreach ($threadCache as $key => $count) {
 				$keyPieces = explode('-', $key);
@@ -2714,6 +2714,8 @@ function pp_admin_scan()
 					'image_count' => (int) $count,
 					'dateline' => TIME_NOW,
 				);
+
+				$forumCounts[$forumId] += $count;
 			}
 
 			if (!empty($insert_arrays)) {
@@ -2721,6 +2723,20 @@ function pp_admin_scan()
 			}
 
 			$cache->update('pp_thread_cache', null);
+
+			$insert_arrays = array();
+
+			foreach ((array) $forumCounts as $forumId => $count) {
+				$insert_arrays[] = array(
+					'fid' => (int) $forumId,
+					'image_count' => (int) $count,
+					'dateline' => TIME_NOW,
+				);
+			}
+
+			if (!empty($insert_arrays)) {
+				$db->insert_query_multiple('pp_image_forums', $insert_arrays);
+			}
 
 			$message = $lang->pp_installation_finished;
 			$redirect = 'index.php?module=config-plugins';
@@ -3426,13 +3442,22 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 {
 	global $mybb, $lang, $db, $sub_forums, $html;
 	static $allForums;
+	static $imageCounts;
 
 	// load the forum cache if necessary
 	if (!is_array($allForums)) {
+		$imageCounts = $fids = array();
+
 		$forumCache = cache_forums();
 
 		foreach ($forumCache as $forum) {
 			$allForums[$forum['pid']][$forum['disporder']][$forum['fid']] = $forum;
+		}
+
+		$query = $db->simple_select('pp_image_forums', 'fid, image_count');
+
+		while ($forum = $db->fetch_array($query)) {
+			$imageCounts[$forum['fid']] = $forum['image_count'];
 		}
 	}
 
@@ -3462,8 +3487,7 @@ function ppBuildForumList(&$table, $pid=0, $depth=1)
 				}
 			// forum
 			} elseif ($forum['type'] == 'f') {
-				$query = $db->simple_select('pp_images', 'COUNT(id) as images', "fid='{$forum['fid']}'");
-				$imageCount = (int) $db->fetch_field($query, 'images');
+				$imageCount = (int) $imageCounts[$forum['fid']];
 
 				$imageCountStyle = 'font-weight: bold; color: blue;';
 				$forumNameStyle = '';
