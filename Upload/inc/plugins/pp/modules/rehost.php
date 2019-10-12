@@ -20,6 +20,7 @@ function pp_rehost_info()
 		'actionPhrase' => 'Rehost Images',
 		'imageLimit' => 12,
 		'createsSet' => false,
+		'contentRequired' => false,
 		'version' => '1',
 	);
 }

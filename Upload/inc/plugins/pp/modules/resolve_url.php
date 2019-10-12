@@ -22,6 +22,7 @@ function pp_resolve_url_info()
 		'actionPhrase' => 'Resolve Image URLs',
 		'imageLimit' => 1,
 		'createsSet' => false,
+		'contentRequired' => true,
 		'version' => '1.0',
 	);
 }
@@ -44,9 +45,6 @@ function pp_resolve_url_process_images($images)
 
 	$id = key($images);
 	$images = array($images[$id]);
-
-	// get the images and some info about them
-	$images = ppFetchRemoteFiles($images);
 
 	$image = array_shift($images);
 	$url = $image['url'];

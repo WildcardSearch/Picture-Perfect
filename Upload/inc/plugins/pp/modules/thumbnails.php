@@ -21,6 +21,8 @@ function pp_thumbnails_info()
 		'pageAction' => 'view_thumbnails',
 		'imageLimit' => 12,
 		'createsSet' => true,
+		'contentRequired' => true,
+		'storeImage' => true,
 		'version' => '1.0',
 		'settings' => array(
 			'max_width' => array(
@@ -85,7 +87,6 @@ function pp_thumbnails_process_images($images, $settings)
 		);
 	}
 
-	$images = ppFetchRemoteFiles($images, true);
 	$images = ppGetImageInfo($images);
 
 	$success = $fail = 0;

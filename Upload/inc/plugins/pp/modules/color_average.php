@@ -22,6 +22,7 @@ function pp_color_average_info()
 		'actionPhrase' => 'Get Image Color Averages',
 		'imageLimit' => 12,
 		'createsSet' => false,
+		'contentRequired' => true,
 		'version' => '1.0',
 	);
 }
@@ -42,7 +43,6 @@ function pp_color_average_process_images($images)
 	$redirectInfo = null;
 
 	// get the images and some info about them
-	$images = ppFetchRemoteFiles($images);
 	$images = ppGetImageInfo($images);
 
 	$doneUrls = array();

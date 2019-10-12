@@ -22,6 +22,7 @@ function pp_try_as_https_info()
 		'actionPhrase' => 'Try Images As HTTPS',
 		'imageLimit' => 1,
 		'createsSet' => false,
+		'contentRequired' => true,
 		'version' => '1.0',
 	);
 }
@@ -59,8 +60,6 @@ function pp_try_as_https_process_images($images)
 	$images[$id]['real_url'] = $images[$id]['url'];
 	$images[$id]['url'] = str_replace('http', 'https', $images[$id]['url']);
 
-	// get the images and some info about them
-	$images = ppFetchRemoteFiles($images);
 	$image = array_shift($images);
 
 	if ($image['info']['http_code'] != 200) {

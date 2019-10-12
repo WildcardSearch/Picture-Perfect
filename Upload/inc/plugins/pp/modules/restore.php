@@ -22,6 +22,7 @@ function pp_restore_info()
 		'actionPhrase' => 'Restore Images',
 		'imageLimit' => 12,
 		'createsSet' => false,
+		'contentRequired' => false,
 		'version' => '1.0',
 	);
 }

@@ -40,6 +40,16 @@ class PicturePerfectModule extends InstallableModule010001
 	protected $createsSet = true;
 
 	/**
+	 * @var
+	 */
+	protected $contentRequired = false;
+
+	/**
+	 * @var
+	 */
+	protected $storeImage = false;
+
+	/**
 	 * @var string
 	 */
 	protected $cacheKey = 'picture_perfect';

@@ -144,6 +144,30 @@ function task_pp_image_tasks($task)
 		return;
 	}
 
+	$contentRequired = $module->get('contentRequired');
+	$storeImage = $module->get('storeImage');
+	$hostSettings = array();
+	if ($module->get('baseName') === 'rehost') {
+		$imageHost = $mybb->input['host'];
+		if (!$imageHost) {
+			$report = 'Bad image host.';
+			add_task_log($task, $report);
+			return;
+		}
+
+		if ($imageHost) {
+			$host = new PicturePerfectImageHost($imageHost);
+
+			if ($host->isValid()) {
+				$contentRequired = $host->get('contentRequired');
+			}
+		}
+	}
+
+	if ($contentRequired) {
+		$taskImages = ppFetchRemoteFiles($taskImages, $storeImage);
+	}
+
 	$info = $module->processImages($taskImages, $tasks[$thisTask]['settings']);
 
 	$ids = '';

@@ -23,6 +23,7 @@ function pp_replace_info()
 		'pageAction' => 'view_replace',
 		'imageLimit' => 12,
 		'createsSet' => false,
+		'contentRequired' => false,
 		'version' => '1.0',
 		'settings' => array(
 			'url' => array(

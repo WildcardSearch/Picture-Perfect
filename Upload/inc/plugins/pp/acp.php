@@ -2415,6 +2415,8 @@ function pp_admin_process_images()
 	}
 
 	$isHost = false;
+	$contentRequired = $module->get('contentRequired');
+	$storeImage = $module->get('storeImage');
 	$hostSettings = array();
 	if ($module->get('baseName') === 'rehost') {
 		$imageHost = $mybb->input['host'];
@@ -2428,6 +2430,7 @@ function pp_admin_process_images()
 
 			if ($host->isValid()) {
 				$isHost = true;
+				$contentRequired = $host->get('contentRequired');
 			}
 		}
 	}
@@ -2491,6 +2494,10 @@ function pp_admin_process_images()
 					$settings[$name] = $mybb->input[$name];
 				}
 			}
+		}
+
+		if ($contentRequired) {
+			$images = ppFetchRemoteFiles($images, $storeImage);
 		}
 
 		$info = $module->processImages($images, $settings);
