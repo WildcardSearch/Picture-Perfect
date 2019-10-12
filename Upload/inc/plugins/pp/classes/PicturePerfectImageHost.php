@@ -45,6 +45,11 @@ class PicturePerfectImageHost extends InstallableModule010001
 	protected $uninstallConstant = 'PP_IN_UNINSTALL';
 
 	/**
+	 * @var
+	 */
+	protected $contentRequired = false;
+
+	/**
 	 * attempt to load the module's info
 	 *
 	 * @param  string base name of the module to load
