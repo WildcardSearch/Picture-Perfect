@@ -114,6 +114,7 @@ function ppGetImageInfo($images)
 		default:
 			continue;
 		}
+
 		$image['filename'] = pathinfo($image['url'], PATHINFO_FILENAME);
 	}
 
